@@ -1,6 +1,7 @@
 #include "VulkanBuffer.h"
 
 #include <stdexcept>
+#include "VulkanBufferUtils.h"
 
 VulkanBuffer::VulkanBuffer() {
     buffer = VK_NULL_HANDLE;
@@ -8,7 +9,7 @@ VulkanBuffer::VulkanBuffer() {
 }
 
 VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                           VkBuffer& buffer, VkDeviceMemory& bufferMemory, VulkanContext& context){
+                           VulkanContext& context){
     this->logicalDevice = context.logicalDevice;
     this->size = size;
     this->usage = usage;
@@ -39,29 +40,23 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
     vkBindBufferMemory(context.logicalDevice, buffer, bufferMemory, 0);
 }
 
+VkResult VulkanBuffer::map() {
+    VkResult result = vkMapMemory(logicalDevice, bufferMemory, 0, size, 0, &data);
+    mapped = (result == VK_SUCCESS);
+    return result;
+}
+
+void  VulkanBuffer::unmap(){
+    mapped = false;
+    vkUnmapMemory(logicalDevice, bufferMemory);
+}
+
+void VulkanBuffer::transferData(const void* src, size_t size) {
+    if (mapped)
+        memcpy(data, src, size);
+}
+
 void VulkanBuffer::cleanup() {
     vkDestroyBuffer(logicalDevice, buffer, nullptr);
     vkFreeMemory(logicalDevice, bufferMemory, nullptr);
-}
-
-uint32_t VulkanBufferUtils::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice) {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(pDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
-    }
-
-    throw std::runtime_error("failed to find suitable memory type!");
-}
-
-void VulkanBufferUtils::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands(commandPool);
-
-    VkBufferCopy copyRegion{};
-    copyRegion.size = size;
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-    endSingleTimeCommands(commandBuffer, primaryCommandPool);
 }

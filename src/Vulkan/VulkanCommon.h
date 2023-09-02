@@ -20,10 +20,6 @@ namespace VulkanCommon {
 			return graphicsFamily.has_value() && presentFamily.has_value();
 		}
 	};
-
-	//QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
-
-	//SwapchainSupportDetails querySwapchainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 }
 
 #endif

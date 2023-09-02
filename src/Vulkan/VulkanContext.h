@@ -49,15 +49,9 @@ public:
 	VulkanContext(GLFWwindow* window);
 	void cleanup();
 
-	void createCommandPool(VkCommandPool* commandPool);
-	void createCommandBuffers(std::vector<VkCommandBuffer>& commandBuffers, VkCommandPool commandPool, VkCommandBufferLevel level);
-	VkCommandBuffer beginSingleTimeCommands(VkCommandPool commandPool);
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool);
-
 	void mainLoop();
 
 private:
-
 
 	VkInstance vulkanInstance;
 	void createVulkanInstance();
@@ -102,10 +96,6 @@ private:
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void drawFrame();
-
-	//might want to refractor this out
-	void createIndexBuffer();
-	void createVertexBuffer();
 };
 
 #endif

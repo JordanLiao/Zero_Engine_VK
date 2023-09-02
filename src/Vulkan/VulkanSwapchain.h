@@ -10,6 +10,7 @@
 class VulkanSwapchain {
 public:
 	VkSwapchainKHR swapChain;
+	std::vector<VkImageView> swapChainImageViews;
 	VulkanCommon::SwapchainSupportDetails support;
 	VkFormat format;
 	VkExtent2D extent;
@@ -23,7 +24,6 @@ private:
 	VkSurfaceKHR surface;
 
 	std::vector<VkImage> swapChainImages;
-	std::vector<VkImageView> swapChainImageViews;
 
 	VulkanCommon::SwapchainSupportDetails querySwapchainSupport(VkSurfaceKHR surface, VkPhysicalDevice device);
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

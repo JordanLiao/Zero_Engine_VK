@@ -42,19 +42,20 @@ public:
     VkBuffer buffer;
     VkBufferUsageFlags usage;
     VkMemoryPropertyFlags properties;
+    bool mapped;
 
     VulkanBuffer();
     VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-        VkBuffer& buffer, VkDeviceMemory& bufferMemory, VulkanContext& context);
+                 VulkanContext& context);
+    VkResult map();
+    void unmap();
+    void transferData(const void* src, size_t size);
     void cleanup();
 private:
     VkDevice logicalDevice;
     VkDeviceMemory bufferMemory;
+    //mapped device memory handle
+    void* data;
 };
-
-namespace VulkanBufferUtils {
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice);
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-}
 
 #endif
