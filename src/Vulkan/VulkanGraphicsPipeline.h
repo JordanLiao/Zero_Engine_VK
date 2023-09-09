@@ -6,18 +6,20 @@
 
 #include "VulkanContext.h"
 #include "VulkanSwapchain.h"
+#include "VulkanBuffer.h"
 
 class VulkanGraphicsPipeline {
 public:
 	VkPipeline graphicsPipeline;
 	VkPipelineLayout pipelineLayout;
 
-	VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VulkanContext& context, 
-		                   VulkanSwapchain& swapchain, std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
+	VulkanGraphicsPipeline();
+	VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VulkanContext& context, VkExtent2D& extent, 
+		                   VkFormat& format, std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
 	void cleanup();
 private:
 	VkDevice logicalDevice;
-	VulkanSwapchain* swapchain;
+	//VulkanSwapchain* swapchain;
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	static std::vector<char> readFile(const std::string& filename);

@@ -3,8 +3,11 @@
 #include <stdexcept>
 #include <fstream>
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VulkanContext& context, 
-                                               VulkanSwapchain& swapchain,std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(){}
+
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VulkanContext& context,
+                                               VkExtent2D& extent, VkFormat& format, 
+                                               std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
     logicalDevice = context.logicalDevice;
     auto vertShaderCode = readFile(vert);
     auto fragShaderCode = readFile(frag);
@@ -43,14 +46,14 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)swapchain.extent.width;
-    viewport.height = (float)swapchain.extent.height;
+    viewport.width = (float)extent.width;
+    viewport.height = (float)extent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
-    scissor.extent = swapchain.extent;
+    scissor.extent = extent;
 
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -135,7 +138,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo{};
     pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
-    pipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchain.format;
+    pipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
     //pipelineRenderingCreateInfo.depthAttachmentFormat = depthFormat;
     //pipelineRenderingCreateInfo.stencilAttachmentFormat = depthFormat;
 
@@ -194,6 +197,8 @@ std::vector<char> VulkanGraphicsPipeline::readFile(const std::string& filename) 
 }
 
 void VulkanGraphicsPipeline::cleanup() {
-    vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+    if(graphicsPipeline != VK_NULL_HANDLE)
+        vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
+    if(pipelineLayout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
 }

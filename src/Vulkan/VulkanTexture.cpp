@@ -22,8 +22,9 @@ VkImageView VulkanTextureUtils::createImageView(VkImage image, VkDevice vDevice,
     return imageView;
 }
 
-void VulkanTextureUtils::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+void VulkanTextureUtils::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+                                               VulkanCommandPool& commandPool) {
+    VkCommandBuffer commandBuffer = VulkanCommandUtils::beginSingleTimeCommands(commandPool);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -86,5 +87,9 @@ void VulkanTextureUtils::transitionImageLayout(VkImage image, VkFormat format, V
         1, &barrier
     );
 
-    endSingleTimeCommands(commandBuffer);
+    VulkanCommandUtils::endSingleTimeCommands(commandBuffer, commandPool);
+}
+
+bool VulkanTextureUtils::hasStencilComponent(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }

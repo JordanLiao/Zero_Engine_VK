@@ -7,7 +7,7 @@
 
 namespace VulkanCommandUtils {
 	VkCommandBuffer beginSingleTimeCommands(VulkanCommandPool& commandPool);
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkQueue queue, VulkanCommandPool& commandPool);
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VulkanCommandPool& commandPool);
 }
 
 #endif

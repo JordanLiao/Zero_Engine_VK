@@ -15,8 +15,7 @@ VkCommandBuffer VulkanCommandUtils::beginSingleTimeCommands(VulkanCommandPool& c
     return singleCommandBuffer[0];
 }
 
-void VulkanCommandUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkQueue queue, 
-                                               VulkanCommandPool& commandPool) {
+void VulkanCommandUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, VulkanCommandPool& commandPool) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -24,8 +23,8 @@ void VulkanCommandUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, Vk
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(queue);
+    vkQueueSubmit(commandPool.queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(commandPool.queue);
 
     commandPool.freeCommandBuffers(&commandBuffer, 1);
 }

@@ -80,24 +80,33 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\VulkanBuffer.cpp" />
-    <ClCompile Include="src\VulkanContext.cpp" />
-    <ClCompile Include="src\VulkanCommon.cpp" />
-    <ClCompile Include="src\VulkanGraphicsPipeline.cpp" />
-    <ClCompile Include="src\VulkanSwapchain.cpp" />
-    <ClCompile Include="src\VulkanTexture.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanBuffer.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanBufferArray.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanBufferUtils.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanCommandPool.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanCommandUtils.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanContext.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanCommon.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanGraphicsPipeline.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanRenderer.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanSwapchain.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanTexture.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\IndexBuffer.h" />
-    <ClInclude Include="src\VertexBuffer.h" />
-    <ClInclude Include="src\VulkanBuffer.h" />
-    <ClInclude Include="src\VulkanCommandPool.h" />
-    <ClInclude Include="src\VulkanContext.h" />
-    <ClInclude Include="src\VulkanCommon.h" />
-    <ClInclude Include="src\VulkanGraphicsPipeline.h" />
-    <ClInclude Include="src\VulkanSwapchain.h" />
-    <ClInclude Include="src\VulkanTexture.h" />
+    <ClInclude Include="src\Resources\IndexBuffer.h" />
+    <ClInclude Include="src\Resources\VertexBuffer.h" />
+    <ClInclude Include="src\Vulkan\VulkanBuffer.h" />
+    <ClInclude Include="src\Vulkan\VulkanBufferArray.h" />
+    <ClInclude Include="src\Vulkan\VulkanBufferUtils.h" />
+    <ClInclude Include="src\Vulkan\VulkanCommandPool.h" />
+    <ClInclude Include="src\Vulkan\VulkanCommandUtils.h" />
+    <ClInclude Include="src\Vulkan\VulkanContext.h" />
+    <ClInclude Include="src\Vulkan\VulkanCommon.h" />
+    <ClInclude Include="src\Vulkan\VulkanGraphicsPipeline.h" />
+    <ClInclude Include="src\Vulkan\VulkanRenderer.h" />
+    <ClInclude Include="src\Vulkan\VulkanSwapchain.h" />
+    <ClInclude Include="src\Vulkan\VulkanTexture.h" />
     <ClInclude Include="src\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
