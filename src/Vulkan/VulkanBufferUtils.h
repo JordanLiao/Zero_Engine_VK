@@ -4,11 +4,11 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-#include "VulkanCommandPool.h"
-#include "VulkanBuffer.h"
-#include "VulkanBufferArray.h"
-
 #include "GraphicsBuffers.h"
+
+class VulkanCommandPool;
+class VulkanBuffer;
+class VulkanBufferArray;
 
 class VulkanBufferUtils {
 public:

@@ -1,5 +1,9 @@
 #include "VulkanBufferUtils.h"
 #include "VulkanCommandUtils.h"
+#include "VulkanCommandPool.h"
+#include "VulkanBufferArray.h"
+#include "VulkanBuffer.h"
+
 #include "GLM/glm.hpp"
 
 #include <stdexcept>

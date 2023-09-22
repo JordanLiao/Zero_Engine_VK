@@ -2,10 +2,9 @@
 #define _VULKANGRAPHICSPIPELINE_H_
 
 #include <vulkan/vulkan.h>
-#include <vector>
 
-#include "VulkanSwapchain.h"
-#include "VulkanBuffer.h"
+#include <vector>
+#include <string>
 
 class VulkanGraphicsPipeline {
 public:
@@ -19,7 +18,6 @@ public:
 
 private:
     VkDevice logicalDevice;
-    //VulkanSwapchain* swapchain;
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
     static std::vector<char> readFile(const std::string& filename);

@@ -7,8 +7,6 @@
 #include "GLFW/glfw3.h"
 
 #include "VulkanCommon.h"
-#include "VulkanBufferUtils.h"
-#include "VulkanCommandPool.h"
 
 #include <vector>
 #include <optional>

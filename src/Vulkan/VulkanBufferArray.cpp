@@ -1,5 +1,5 @@
-
 #include "VulkanBufferArray.h"
+#include "VulkanBuffer.h"
 
 VulkanBufferArray::VulkanBufferArray() {}
 
