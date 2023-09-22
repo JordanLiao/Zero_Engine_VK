@@ -7,31 +7,34 @@
 #include "VulkanCommandPool.h"
 #include "VulkanBuffer.h"
 #include "VulkanBufferArray.h"
-#include "VulkanContext.h"
 
-#include "GLM/glm.hpp"
-#include "../Resources/VertexBuffer.h"
-#include "../Resources/IndexBuffer.h"
+#include "GraphicsBuffers.h"
 
-namespace VulkanBufferUtils {
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice);
-    void copyBuffer(VulkanBuffer& srcBuffer, VulkanBuffer& dstBuffer, VulkanCommandPool& commandPool);
-    VulkanBuffer* createVulkanBuffer(void* srcData, VkDeviceSize size,
-                                     VkBufferUsageFlags usageFlags,
-                                     VkMemoryPropertyFlags propertyFlags,
-                                     VulkanCommandPool& commandPool,
-                                     VulkanContext& context);
+class VulkanBufferUtils {
+public:
+    static void init(VkDevice lDevice, VkPhysicalDevice pdevice, const VulkanCommandPool& cPool);
+    static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    static void copyBuffer(VulkanBuffer& dstBuffer, VulkanBuffer& srcBuffer);
+    static VulkanBuffer createVulkanBuffer(void* srcData, VkDeviceSize size,
+                                            VkBufferUsageFlags usageFlags,
+                                            VkMemoryPropertyFlags propertyFlags);
 
     /*
         Create a Vulkan buffer from a loaded index buffer.
     */
-    VulkanBuffer* createIndexBuffer(const IndexBuffer& indexBuffer, VulkanCommandPool& commandPool, VulkanContext& context);
+    static VulkanBuffer createIndexBuffer(const IndexBuffer& indexBuffer);
 
     /*
         Create a VulkanBufferArray from a loaded vertex buffer that may have several different attribute types.
     */
-    VulkanBufferArray createVertexBuffers(VertexBuffer& vertexBuffers, VulkanCommandPool& commandPool, 
-                                          VulkanContext& context);
-}
+    static VulkanBufferArray createVertexBuffers(VertexBuffer& vertexBuffers);
+    static void cleanup();
+
+private:
+    static bool initialized;
+    static VkDevice logicalDevice;
+    static VkPhysicalDevice physicalDevice;
+    static VulkanCommandPool commandPool;
+};
 
 #endif

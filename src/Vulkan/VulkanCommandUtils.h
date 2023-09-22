@@ -6,8 +6,8 @@
 #include "VulkanCommandPool.h"
 
 namespace VulkanCommandUtils {
-	VkCommandBuffer beginSingleTimeCommands(VulkanCommandPool& commandPool);
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VulkanCommandPool& commandPool);
+    VkCommandBuffer beginSingleTimeCommands(VulkanCommandPool& commandPool);
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer, VulkanCommandPool& commandPool);
 }
 
 #endif

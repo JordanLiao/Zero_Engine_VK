@@ -7,6 +7,8 @@
 #include "GLFW/glfw3.h"
 
 #include "VulkanCommon.h"
+#include "VulkanBufferUtils.h"
+#include "VulkanCommandPool.h"
 
 #include <vector>
 #include <optional>
@@ -21,43 +23,43 @@
 #endif
 
 const std::vector<const char*> deviceExtensions = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 
 const std::vector<const char*> validationLayers = {
-		"VK_LAYER_KHRONOS_validation"
+    "VK_LAYER_KHRONOS_validation"
 };
 
 class VulkanContext {
 public:
-	VkSurfaceKHR surface;
-	VkPhysicalDevice physicalDevice;
-	VkDevice logicalDevice;
+    VkSurfaceKHR surface;
+    VkPhysicalDevice physicalDevice;
+    VkDevice logicalDevice;
 
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
-	VkQueue transferQueue;
-	VulkanCommon::QueueFamilyIndices queueFamilyIndices;
-	GLFWwindow* window;
+    VkQueue graphicsQueue;
+    VkQueue presentQueue;
+    VkQueue transferQueue;
+    VulkanCommon::QueueFamilyIndices queueFamilyIndices;
+    GLFWwindow* window;
 
-	VulkanContext(GLFWwindow* window);
-	void cleanup();
+    VulkanContext();
+    VulkanContext(GLFWwindow* window);
+    void cleanup();
 
 private:
-
-	VkInstance vulkanInstance;
-	void createVulkanInstance();
+    VkInstance vulkanInstance;
+    void createVulkanInstance();
 	
-	bool checkValidationLayerSupport();
+    bool checkValidationLayerSupport();
 
-	void createSurface();
+    void createSurface();
 
-	VulkanCommon::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice pDevice);
-	void pickPhysicalDevice();
-	bool isDeviceSuitable(VkPhysicalDevice pDevice);
-	bool checkDeviceExtensionSupport(VkPhysicalDevice pDevice); 
+    VulkanCommon::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice pDevice);
+    void pickPhysicalDevice();
+    bool isDeviceSuitable(VkPhysicalDevice pDevice);
+    bool checkDeviceExtensionSupport(VkPhysicalDevice pDevice); 
 	
-	void createLogicalDevice();
+    void createLogicalDevice();
 };
 
 #endif

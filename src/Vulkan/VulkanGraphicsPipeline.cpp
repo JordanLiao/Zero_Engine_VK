@@ -5,10 +5,10 @@
 
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(){}
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VulkanContext& context,
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VkDevice& logicalDevice ,
                                                VkExtent2D& extent, VkFormat& format, 
                                                std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
-    logicalDevice = context.logicalDevice;
+    this->logicalDevice = logicalDevice;
     auto vertShaderCode = readFile(vert);
     auto fragShaderCode = readFile(frag);
 

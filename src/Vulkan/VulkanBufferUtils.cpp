@@ -1,11 +1,31 @@
 #include "VulkanBufferUtils.h"
 #include "VulkanCommandUtils.h"
+#include "GLM/glm.hpp"
 
 #include <stdexcept>
 
-uint32_t VulkanBufferUtils::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice) {
+bool VulkanBufferUtils::initialized = false;
+VkDevice VulkanBufferUtils::logicalDevice = VK_NULL_HANDLE;
+VkPhysicalDevice VulkanBufferUtils::physicalDevice = VK_NULL_HANDLE;
+VulkanCommandPool VulkanBufferUtils::commandPool;
+
+void VulkanBufferUtils::init(VkDevice lDevice, VkPhysicalDevice pdevice, const VulkanCommandPool& cPool) {
+    if (cPool.commandPool == VK_NULL_HANDLE) {
+        throw std::runtime_error("VulkanBufferUtils cannot initialize because provided CommandPool is not valid!");
+    }
+    logicalDevice = lDevice;
+    physicalDevice = pdevice;
+    commandPool = cPool;
+    initialized = true;
+}
+
+uint32_t VulkanBufferUtils::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    if (!initialized) {
+        throw std::runtime_error("VulkanBufferUtils is not initialized!");
+    }
+
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(pDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
@@ -15,59 +35,70 @@ uint32_t VulkanBufferUtils::findMemoryType(uint32_t typeFilter, VkMemoryProperty
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-void VulkanBufferUtils::copyBuffer(VulkanBuffer& srcBuffer, VulkanBuffer& dstBuffer, VulkanCommandPool& commandPool) {
+void VulkanBufferUtils::copyBuffer(VulkanBuffer& dstBuffer, VulkanBuffer& srcBuffer) {
+    if (!initialized) {
+        throw std::runtime_error("VulkanBufferUtils is not initialized!");
+    }
+
     VkCommandBuffer commandBuffer = VulkanCommandUtils::beginSingleTimeCommands(commandPool);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = srcBuffer.size;
-    vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1, &copyRegion);
+    vkCmdCopyBuffer(commandBuffer, srcBuffer.vkBuffer, dstBuffer.vkBuffer, 1, &copyRegion);
 
     VulkanCommandUtils::endSingleTimeCommands(commandBuffer, commandPool);
 }
 
-VulkanBuffer* VulkanBufferUtils::createVulkanBuffer(void* srcData, VkDeviceSize size, 
+VulkanBuffer VulkanBufferUtils::createVulkanBuffer(void* srcData, VkDeviceSize size, 
                                                     VkBufferUsageFlags usageFlags,
-                                                    VkMemoryPropertyFlags propertyFlags,
-                                                    VulkanCommandPool& commandPool,
-                                                    VulkanContext& context) {
-    VulkanBuffer stagingBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
+                                                    VkMemoryPropertyFlags propertyFlags) {
+    if (!initialized) {
+        throw std::runtime_error("VulkanBufferUtils is not initialized!");
+    }
 
+    VulkanBuffer stagingBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                               logicalDevice, physicalDevice);
     stagingBuffer.map();
     stagingBuffer.transferData(srcData, (size_t)size);
     stagingBuffer.unmap();
 
-    VulkanBuffer* buffer = new VulkanBuffer(size, usageFlags,propertyFlags, context);
-    copyBuffer(stagingBuffer, *buffer, commandPool);
+    VulkanBuffer buffer(size, usageFlags, propertyFlags, logicalDevice, physicalDevice);
+    copyBuffer(buffer, stagingBuffer);
     stagingBuffer.cleanup();
 
     return buffer;
 }
 
-VulkanBuffer* VulkanBufferUtils::createIndexBuffer(const IndexBuffer& indexBuffer, VulkanCommandPool& commandPool, 
-                                                   VulkanContext& context) {
+VulkanBuffer VulkanBufferUtils::createIndexBuffer(const IndexBuffer& indexBuffer) {
+    if (!initialized) {
+        throw std::runtime_error("VulkanBufferUtils is not initialized!");
+    }
+
     if (indexBuffer.triangles.size() == 0)
-        return nullptr;
+        return VulkanBuffer{};
     VkDeviceSize bufferSize = sizeof(glm::ivec3) * indexBuffer.triangles.size();
 
     return createVulkanBuffer((void*)indexBuffer.triangles.data(), bufferSize, 
                               VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-                              commandPool, context);
+                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
-VulkanBufferArray VulkanBufferUtils::createVertexBuffers(VertexBuffer& vertexBuffers, VulkanCommandPool& commandPool,
-                                                                  VulkanContext& context) {
-    VulkanBufferArray result{};
+VulkanBufferArray VulkanBufferUtils::createVertexBuffers(VertexBuffer& vertexBuffers) {
+    if (!initialized) {
+        throw std::runtime_error("VulkanBufferUtils is not initialized!");
+    }
+
+    VulkanBufferArray result;
     VkDeviceSize bufferSize;
     if(vertexBuffers.positions.size() > 0) {
         bufferSize = sizeof(vertexBuffers.positions[0]) * vertexBuffers.positions.size();
         result.buffers.push_back(createVulkanBuffer((void*)vertexBuffers.positions.data(),
                                                     bufferSize,
                                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                                    commandPool, context));
-        result.vulkanBuffers.push_back(result.buffers.back()->buffer); //need a separate VkBuffer handle
+                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
+        result.vkBuffers.push_back(result.buffers.back().vkBuffer); //need a separate VkBuffer handle
     }
 
     if(vertexBuffers.normals.size() > 0) {
@@ -75,10 +106,14 @@ VulkanBufferArray VulkanBufferUtils::createVertexBuffers(VertexBuffer& vertexBuf
         result.buffers.push_back(createVulkanBuffer((void*)vertexBuffers.normals.data(),
                                                     bufferSize,
                                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                                    commandPool, context));
-        result.vulkanBuffers.push_back(result.buffers.back()->buffer);
+                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
+        result.vkBuffers.push_back(result.buffers.back().vkBuffer);
     }
 
     return result;
+}
+
+void VulkanBufferUtils::cleanup() {
+    commandPool.cleanup();
+    initialized = false;
 }

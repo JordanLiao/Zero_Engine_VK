@@ -4,8 +4,6 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-#include "VulkanContext.h"
-
 namespace VulkanVertexBufferInfo {
     const std::vector<VkVertexInputBindingDescription> vertexBindings = {
         {
@@ -38,19 +36,17 @@ namespace VulkanVertexBufferInfo {
 
 class VulkanBuffer {
 public:
-    VkDeviceSize size = 0;
-    VkBuffer buffer;
-    VkBufferUsageFlags usage;
-    VkMemoryPropertyFlags properties;
-    bool mapped;
+    VkBuffer vkBuffer;
+    VkDeviceSize size;
 
     VulkanBuffer();
     VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-                 VulkanContext& context);
+                 VkDevice& logicalDevice, VkPhysicalDevice& physicalDevice);
     VkResult map();
     void unmap();
     void transferData(const void* src, size_t size);
     void cleanup();
+ 
 private:
     VkDevice logicalDevice;
     VkDeviceMemory bufferMemory;
