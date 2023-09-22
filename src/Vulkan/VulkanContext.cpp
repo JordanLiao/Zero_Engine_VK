@@ -7,6 +7,8 @@
 #include <array>
 #include <iostream>
 
+VulkanContext::VulkanContext() {}
+
 VulkanContext::VulkanContext(GLFWwindow* window) {
     this->window = window;
     createVulkanInstance();
@@ -15,6 +17,9 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     //save queue family indices only after physicalDevice is set
     queueFamilyIndices = findQueueFamilies(physicalDevice); 
     createLogicalDevice();
+    VulkanBufferUtils::init(logicalDevice, physicalDevice, VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                                                           queueFamilyIndices.transferFamily.value(),
+                                                           logicalDevice));
 }
 
 void VulkanContext::createVulkanInstance() {
@@ -208,66 +213,11 @@ void VulkanContext::createLogicalDevice() {
     vkGetDeviceQueue(logicalDevice, queueFamilyIndices.transferFamily.value(), 0, &transferQueue);
 }
 
-/*void VulkanContext::drawFrame() {
-    vkWaitForFences(logicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    vkResetFences(logicalDevice, 1, &inFlightFences[currentFrame]);
-
-    //Important: the imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next
-    //not that it is availble immediately, so a semaphore is needed to synchronize vkcommands that
-    //depend on the image.
-    uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame],
-        VK_NULL_HANDLE, &imageIndex);
-    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("failed to acquire swap chain image!");
-    }
-
-    vkResetCommandBuffer(primaryCommandBuffers[currentFrame], 0);
-    recordCommandBuffer(primaryCommandBuffers[currentFrame], imageIndex);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-    //we cannot output color until image becomes availble
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &primaryCommandBuffers[currentFrame];
-
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
-
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit draw command buffer!");
-    }
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-
-    VkSwapchainKHR swapChains[] = { swapChain };
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr; // Optional
-
-    result = vkQueuePresentKHR(presentQueue, &presentInfo);
-    if (result != VK_SUCCESS) {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}*/
-
 void VulkanContext::cleanup() {
     vkDestroyDevice(logicalDevice, nullptr);
     vkDestroySurfaceKHR(vulkanInstance, surface, nullptr);
     vkDestroyInstance(vulkanInstance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
+    VulkanBufferUtils::cleanup();
 }

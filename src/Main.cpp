@@ -1,44 +1,52 @@
 #include <iostream>
 
 #include "Window.h"
-#include "Resources/VertexBuffer.h"
-#include "Resources/IndexBuffer.h"
+#include "VulkanContext.h"
+#include "VulkanBuffer.h"
+#include "VulkanBufferArray.h"
+#include "VulkanBufferUtils.h"
+#include "VulkanCommandPool.h"
+#include "VulkanBufferUtils.h"
+#include "VulkanRenderer.h"
+#include "GraphicsBuffers.h"
+#include "Graphics/Object.h"
 
-#include "Vulkan/VulkanContext.h"
-#include "Vulkan/VulkanBuffer.h"
-#include "Vulkan/VulkanBufferArray.h"
-#include "Vulkan/VulkanBufferUtils.h"
-#include "Vulkan/VulkanCommandPool.h"
-#include "Vulkan/VulkanBufferUtils.h"
-#include "Vulkan/VulkanRenderer.h"
+#include "GLM/gtx/transform.hpp"
+
+#include "../Resources/ResourceManager.h"
 
 int main(int argc, char* argv[]) {
-	Window window(900, 600, "Zero Engine VK");
+    uint32_t width = 900, height = 600;
+	Window window(width, height, "Zero Engine VK");
 	VulkanContext vulkanContext(window.window);
+    ResourceManager::init(vulkanContext);
+	VulkanRenderer renderer(vulkanContext);
+	VulkanCommandPool transferCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, 
+		                                  vulkanContext.queueFamilyIndices.transferFamily.value(), 
+		                                  vulkanContext.logicalDevice);
 
 	VertexBuffer vertices{
-		{glm::vec3(-0.5f, 0.f, 0.f), glm::vec3(0.5f, 0.f, 0.f), glm::vec3(0.f, 0.7f, 0.f)},
-		{glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 0.f, 1.f)}
+		{glm::vec3(-0.5f, -0.5f, 0.f), glm::vec3(-0.5f, 0.5f, 0.f), glm::vec3(0.5f, 0.5f, 0.f), glm::vec3(0.5f, -0.5f, 0.f)},
+		{glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 0.f, 1.f)}
 	};
 
 	IndexBuffer indices{
-		{glm::ivec3(2,1,0)},
+		{glm::ivec3(0, 1, 2), glm::ivec3(3,0,2)},
 	};
 
-	VulkanCommandPool transferCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, 
-		                          vulkanContext.queueFamilyIndices.transferFamily.value(), 
-		                          vulkanContext);
+	//VulkanBuffer indexBuffer = VulkanBufferUtils::createIndexBuffer(indices);
+	//VulkanBufferArray vertexBuffers = VulkanBufferUtils::createVertexBuffers(vertices);
+	
+    Object* obj = ResourceManager::loadObject("./assets/bunny.obj");
 
-	VulkanBuffer* indexBuffer = VulkanBufferUtils::createIndexBuffer(indices, transferCommandPool, vulkanContext);
-	VulkanBufferArray vertexBuffers = VulkanBufferUtils::createVertexBuffers(vertices,transferCommandPool, vulkanContext);
+    glm::mat4 projView = glm::perspective(glm::radians(50.0f), (float)width / (float)height, 1.0f, 100.0f) *
+                         glm::lookAt(glm::vec3(0.f, 0.f, 3.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 
-	std::cout << sizeof(VulkanBuffer) << std::endl;
-
-	VulkanRenderer renderer(vulkanContext);
 	while (!glfwWindowShouldClose(window.window)) {
 		glfwPollEvents();
-		renderer.beginDrawCalls();
-		renderer.draw(3, indexBuffer->buffer, vertexBuffers.vulkanBuffers.data());
+		renderer.beginDrawCalls(projView);
+		//renderer.draw(6, indexBuffer.buffer, vertexBuffers.vkBuffers.data());
+		renderer.draw(obj->vulkanIndexBuffer.size / sizeof(glm::ivec3) * 3, obj->vulkanIndexBuffer.vkBuffer,  obj->vulkanVertexBuffers.vkBuffers.data());
 		renderer.submitDrawCalls();
 	}
 	vkDeviceWaitIdle(vulkanContext.logicalDevice);

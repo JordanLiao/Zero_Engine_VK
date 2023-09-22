@@ -1,13 +1,12 @@
 #include "VulkanCommandPool.h"
 
 #include <stdexcept>
-#include "VulkanCommandUtils.h"
 
 VulkanCommandPool::VulkanCommandPool() {}
 
-VulkanCommandPool::VulkanCommandPool(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex, VulkanContext& context) {
-	this->logicalDevice = context.logicalDevice;
-    vkGetDeviceQueue(context.logicalDevice, queueFamilyIndex, 0, &(this->queue));
+VulkanCommandPool::VulkanCommandPool(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex, const VkDevice& logicalDevice) {
+    this->logicalDevice = logicalDevice;
+    vkGetDeviceQueue(logicalDevice, queueFamilyIndex, 0, &(this->queue));
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

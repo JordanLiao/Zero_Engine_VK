@@ -1,19 +1,21 @@
 #include "VulkanBuffer.h"
 
-#include <stdexcept>
 #include "VulkanBufferUtils.h"
 
+#include <stdexcept>
+#include <iostream>
+
 VulkanBuffer::VulkanBuffer() {
-    buffer = VK_NULL_HANDLE;
+    vkBuffer = VK_NULL_HANDLE;
     bufferMemory = VK_NULL_HANDLE;
+    logicalDevice = VK_NULL_HANDLE;
 }
 
 VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                           VulkanContext& context){
-    this->logicalDevice = context.logicalDevice;
+                           VkDevice& logicalDevice, VkPhysicalDevice& physicalDevice){
     this->size = size;
-    this->usage = usage;
-    this->properties = properties;
+    data = nullptr;
+    this->logicalDevice = logicalDevice;
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -21,42 +23,41 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(context.logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &vkBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create buffer!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(context.logicalDevice, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(logicalDevice, vkBuffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties, context.physicalDevice);
+    allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(context.logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate buffer memory!");
     }
 
-    vkBindBufferMemory(context.logicalDevice, buffer, bufferMemory, 0);
+    if (vkBindBufferMemory(logicalDevice, vkBuffer, bufferMemory, 0) != VK_SUCCESS) {
+        throw std::runtime_error("failed to bind VkBuffer to VkMemory!");
+    }
 }
 
 VkResult VulkanBuffer::map() {
     VkResult result = vkMapMemory(logicalDevice, bufferMemory, 0, size, 0, &data);
-    mapped = (result == VK_SUCCESS);
     return result;
 }
 
 void  VulkanBuffer::unmap(){
-    mapped = false;
     vkUnmapMemory(logicalDevice, bufferMemory);
 }
 
 void VulkanBuffer::transferData(const void* src, size_t size) {
-    if (mapped)
-        memcpy(data, src, size);
+    memcpy(data, src, size);
 }
 
 void VulkanBuffer::cleanup() {
-    vkDestroyBuffer(logicalDevice, buffer, nullptr);
+    vkDestroyBuffer(logicalDevice, vkBuffer, nullptr);
     vkFreeMemory(logicalDevice, bufferMemory, nullptr);
 }
