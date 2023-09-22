@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-#include "VulkanBuffer.h"
+class VulkanBuffer;
 
 class VulkanBufferArray {
 public:

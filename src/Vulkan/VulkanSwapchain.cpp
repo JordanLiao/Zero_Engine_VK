@@ -1,6 +1,9 @@
-#include <stdexcept>
-
 #include "VulkanSwapchain.h"
+#include "VulkanContext.h"
+
+#include "GLFW/glfw3.h"
+
+#include <stdexcept>
 
 VulkanSwapchain::VulkanSwapchain() {
     swapchain = VK_NULL_HANDLE;

@@ -3,7 +3,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "VulkanCommandPool.h"
+class VulkanCommandPool;
 
 namespace VulkanCommandUtils {
     VkCommandBuffer beginSingleTimeCommands(VulkanCommandPool& commandPool);

@@ -1,4 +1,6 @@
 #include "VulkanRenderer.h"
+#include "VulkanBufferUtils.h"
+#include "VulkanContext.h"
 
 #include <stdexcept>
 #include <iostream>

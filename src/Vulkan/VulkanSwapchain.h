@@ -1,11 +1,13 @@
 #ifndef _VULKANSWAPCHAIN_H_
 #define _VULKANSWAPCHAIN_H_
 
+#include "VulkanTexture.h"
+
 #include <vulkan/vulkan.h>
 #include <vector>
 
-#include "VulkanContext.h"
-#include "VulkanTexture.h"
+class VulkanContext;
+struct GLFWwindow;
 
 struct SwapchainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;

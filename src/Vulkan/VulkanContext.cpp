@@ -1,4 +1,6 @@
 #include "VulkanContext.h"
+#include "VulkanBufferUtils.h"
+#include "VulkanCommandPool.h"
 
 #include <stdexcept>
 #include <set>

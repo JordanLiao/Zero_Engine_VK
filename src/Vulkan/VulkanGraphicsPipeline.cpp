@@ -1,5 +1,7 @@
 #include "VulkanGraphicsPipeline.h"
 
+#include "VulkanBuffer.h"
+
 #include <stdexcept>
 #include <fstream>
 
@@ -33,7 +35,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     auto bindingDescription = VulkanVertexBufferInfo::vertexBindings;
     auto attributeDescriptions = VulkanVertexBufferInfo::vertexAttributes;
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = VulkanVertexBufferInfo::vertexBindings.size();
+    vertexInputInfo.vertexBindingDescriptionCount = (uint32_t)VulkanVertexBufferInfo::vertexBindings.size();
     vertexInputInfo.pVertexBindingDescriptions = bindingDescription.data();
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
@@ -127,7 +129,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
+    pipelineLayoutInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional

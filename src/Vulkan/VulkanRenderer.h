@@ -1,17 +1,17 @@
 #ifndef _VULKANRENDERER_H_
 #define _VULKANRENDERER_H_
 
-#include "VulkanContext.h"
 #include "VulkanSwapchain.h"
 #include "VulkanCommandPool.h"
 #include "VulkanGraphicsPipeline.h"
-#include "VulkanCommon.h"
-#include "VulkanBufferUtils.h"
+#include "VulkanBuffer.h"
 
 #include "GLM/glm.hpp"
 #include <vulkan/vulkan.h>
 
 #include <vector>
+
+class VulkanContext;
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
