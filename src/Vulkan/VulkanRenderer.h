@@ -5,6 +5,7 @@
 #include "VulkanCommandPool.h"
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanBuffer.h"
+#include "VulkanBufferArray.h"
 
 #include "GLM/glm.hpp"
 #include <vulkan/vulkan.h>
@@ -26,30 +27,19 @@ struct DescriptorSetBindingInfo {
     VkShaderStageFlags stageFlags;
 };
 
-struct DescriptorSetLayoutInfo {
-    int numSet; //num of descriptor set of this layout. Layouts of the same kind will be placed adjacent to each other
-    std::vector<DescriptorSetBindingInfo> bindingInfos; //info at each binding points
-};
-
 //ordering of the descriptor set layouts by usage
 enum DescriptorSetLayoutIndex {
     global,
     perFrame,
 };
 
-const std::vector<DescriptorSetLayoutInfo> descriptorSetLayoutInfos {
-    {//global descriptor set layout, just 1
-        1, 
-        {
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT} //binding0
-        }
-    }, 
-    {//per frame descriptor set layouts, in MAX_FRAMES_IN_FLIGHT
-        MAX_FRAMES_IN_FLIGHT,
-        {
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT}
-        } 
-    }
+const std::vector<std::vector<DescriptorSetBindingInfo>> descriptorSetLayoutInfos {
+    { //global descriptor set
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT}
+    },
+    { //per frame descriptor set
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT}
+    } 
 };
 
 struct UniformBufferObject {
@@ -58,6 +48,7 @@ struct UniformBufferObject {
 
 struct GlobalUniformBufferObject {
     glm::vec4 light;
+    glm::vec3 what;
 };
 
 class VulkanRenderer {
@@ -86,6 +77,12 @@ public:
     void cleanup();
 
 private:
+    static PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT;
+    static PFN_vkGetDescriptorSetLayoutBindingOffsetEXT vkGetDescriptorSetLayoutBindingOffsetEXT;
+    static PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT;
+    static PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT;
+
+    VkInstance instance;
     VkDevice logicalDevice;
     VkPhysicalDevice physicalDevice;
     VkQueue graphicsQueue;
@@ -111,6 +108,7 @@ private:
     
     //in the same order as descriptorSetLayoutInfos above
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    std::vector<VkDeviceSize> descriptorSetLayoutSizes;
     void createDescriptorSetLayouts();
 
     //VulkanBufferArray perFrameUBOs;
@@ -119,6 +117,12 @@ private:
 
     VkDescriptorSet globalDescriptorSet;
     std::vector<VkDescriptorSet> perFrameDescriptorSets;
+
+    uint32_t uniformDescriptorOffset;
+    VulkanBuffer globalDescriptorSetBuffer;
+    VulkanBuffer perFrameDescriptorSetBuffers;
+    VkDeviceAddress globalDescriptorSetBufferDeviceAddr;
+    VkDeviceAddress perFrameDescriptorSetBuffersDeviceAddr;
     void createDescriptorSets();
 
     //initial testing pipeline, there could be many different pipelines

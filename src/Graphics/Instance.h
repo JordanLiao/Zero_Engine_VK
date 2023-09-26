@@ -4,7 +4,8 @@
 #include <string>
 
 #include "GLM/glm.hpp"
-#include "Object.h"
+
+struct Object;
 
 class Instance {
 public:

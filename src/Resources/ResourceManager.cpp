@@ -5,6 +5,9 @@
 #include <stb_image.h>
 #endif
 
+#include "VulkanBufferUtils.h"
+#include "Object.h"
+#include "Mesh.h"
 #include "../tools/MathConverter.h"
 
 #include <iostream>

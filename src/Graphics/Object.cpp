@@ -1,4 +1,5 @@
 #include "Object.h"
+#include "Mesh.h"
 
 #include "../tools/ColorID.h"
 

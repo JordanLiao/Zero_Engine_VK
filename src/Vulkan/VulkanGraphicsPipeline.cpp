@@ -7,8 +7,8 @@
 
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(){}
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, VkDevice& logicalDevice ,
-                                               VkExtent2D& extent, VkFormat& format, 
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
+                                               VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& format, 
                                                std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
     this->logicalDevice = logicalDevice;
     auto vertShaderCode = readFile(vert);
@@ -146,6 +146,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.flags = flags;
     pipelineInfo.pNext = &pipelineRenderingCreateInfo;
     pipelineInfo.stageCount = 2;
     pipelineInfo.pStages = shaderStages;

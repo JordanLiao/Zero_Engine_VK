@@ -6,13 +6,15 @@
 #include <string>
 #include <unordered_map>
 
-#include "Mesh.h"
 #include "SkeletalAnimation.h"
 #include "Node.h"
 #include "Bone.h"
 
 #include "../Vulkan/VulkanBuffer.h"
 #include "../Vulkan/VulkanBufferArray.h"
+
+struct Mesh;
+struct Material;
 
 struct Object{
 	std::string objFileName;

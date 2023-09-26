@@ -3,8 +3,6 @@
 
 #include "VulkanContext.h"
 #include "VulkanCommandPool.h"
-#include "VulkanBufferUtils.h"
-#include "Object.h"
 #include "Material.h"
 
 #include <assimp/scene.h>
@@ -15,6 +13,8 @@
 #include <list>
 #include <queue>
 #include <string>
+
+struct Object;
 
 #define MAX_NUM_BONE_PER_VERTEX 8
 
