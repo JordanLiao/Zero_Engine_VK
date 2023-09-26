@@ -13,6 +13,8 @@ VkDevice VulkanBufferUtils::logicalDevice = VK_NULL_HANDLE;
 VkPhysicalDevice VulkanBufferUtils::physicalDevice = VK_NULL_HANDLE;
 VulkanCommandPool VulkanBufferUtils::commandPool;
 
+PFN_vkGetBufferDeviceAddressKHR VulkanBufferUtils::vkGetBufferDeviceAddressKHR;
+
 void VulkanBufferUtils::init(VkDevice lDevice, VkPhysicalDevice pdevice, const VulkanCommandPool& cPool) {
     if (cPool.commandPool == VK_NULL_HANDLE) {
         throw std::runtime_error("VulkanBufferUtils cannot initialize because provided CommandPool is not valid!");
@@ -21,6 +23,9 @@ void VulkanBufferUtils::init(VkDevice lDevice, VkPhysicalDevice pdevice, const V
     physicalDevice = pdevice;
     commandPool = cPool;
     initialized = true;
+
+    vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(vkGetDeviceProcAddr(logicalDevice, 
+                                                                                    "vkGetBufferDeviceAddressKHR"));
 }
 
 uint32_t VulkanBufferUtils::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -115,6 +120,22 @@ VulkanBufferArray VulkanBufferUtils::createVertexBuffers(VertexBuffer& vertexBuf
     }
 
     return result;
+}
+
+//based on Sascha Willems' method
+uint32_t VulkanBufferUtils::getAlignedBufferSize(size_t bufferSize, size_t alignment) {
+    size_t alignedSize = bufferSize;
+    if (alignment > 0) {
+        alignedSize = (alignedSize + alignment - 1) & ~(alignment - 1);
+    }
+    return (uint32_t)alignedSize;
+}
+
+uint64_t VulkanBufferUtils::getBufferDeviceAddress(VkBuffer buffer) {
+    VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
+    bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    bufferDeviceAI.buffer = buffer;
+    return vkGetBufferDeviceAddressKHR(logicalDevice, &bufferDeviceAI);
 }
 
 void VulkanBufferUtils::cleanup() {

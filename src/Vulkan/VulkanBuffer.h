@@ -37,6 +37,7 @@ namespace VulkanVertexBufferInfo {
 class VulkanBuffer {
 public:
     VkBuffer vkBuffer;
+    void* data;
     VkDeviceSize size;
 
     VulkanBuffer();
@@ -51,7 +52,6 @@ private:
     VkDevice logicalDevice;
     VkDeviceMemory bufferMemory;
     //mapped device memory handle
-    void* data;
 };
 
 #endif

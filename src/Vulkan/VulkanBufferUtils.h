@@ -28,9 +28,15 @@ public:
         Create a VulkanBufferArray from a loaded vertex buffer that may have several different attribute types.
     */
     static VulkanBufferArray createVertexBuffers(VertexBuffer& vertexBuffers);
+    
+    static uint32_t getAlignedBufferSize(size_t bufferSize, size_t alignment);
+
+    static uint64_t getBufferDeviceAddress(VkBuffer buffer);
+
     static void cleanup();
 
 private:
+    static PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
     static bool initialized;
     static VkDevice logicalDevice;
     static VkPhysicalDevice physicalDevice;

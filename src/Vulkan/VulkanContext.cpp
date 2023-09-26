@@ -42,8 +42,20 @@ void VulkanContext::createVulkanInstance() {
     }
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    createInfo.enabledExtensionCount = glfwExtensionCount;
-    createInfo.ppEnabledExtensionNames = glfwExtensions;
+
+    std::vector<const char*> extensions;
+    extensions.reserve(glfwExtensionCount + instanceExtensions.size());
+    for (uint32_t i = 0; i < glfwExtensionCount; i++) {
+        extensions.push_back(glfwExtensions[i]);
+    }
+
+    for (const char* ex : instanceExtensions) {
+        extensions.push_back(ex);
+    }
+
+    createInfo.enabledExtensionCount = extensions.size();
+    createInfo.ppEnabledExtensionNames = extensions.data();
+
 
     if (ENABLE_VALIDATION_LAYER) {
         if (!checkValidationLayerSupport()) {
@@ -197,9 +209,20 @@ void VulkanContext::createLogicalDevice() {
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+    VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddresFeatures{};
+    bufferDeviceAddresFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+    bufferDeviceAddresFeatures.bufferDeviceAddress = VK_TRUE;
+
+    VkPhysicalDeviceDescriptorBufferFeaturesEXT descriptorBufferFeaturesEXT{};
+    descriptorBufferFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+    descriptorBufferFeaturesEXT.descriptorBuffer = VK_TRUE;
+    descriptorBufferFeaturesEXT.pNext = &bufferDeviceAddresFeatures;
+
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature{};
     dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     dynamicRenderingFeature.dynamicRendering = VK_TRUE;
+    dynamicRenderingFeature.pNext = &descriptorBufferFeaturesEXT;
+
     createInfo.pNext = &dynamicRenderingFeature;
 
     createInfo.pEnabledFeatures = &deviceFeatures;

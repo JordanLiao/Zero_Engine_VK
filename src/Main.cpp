@@ -16,6 +16,7 @@
 #include "../Resources/ResourceManager.h"
 
 int main(int argc, char* argv[]) {
+
     uint32_t width = 900, height = 600;
 	Window window(width, height, "Zero Engine VK");
 	VulkanContext vulkanContext(window.window);
