@@ -5,11 +5,6 @@
 #include <stdexcept>
 #include <iostream>
 
-PFN_vkGetDescriptorSetLayoutSizeEXT VulkanRenderer::vkGetDescriptorSetLayoutSizeEXT = VK_NULL_HANDLE;
-PFN_vkGetDescriptorSetLayoutBindingOffsetEXT VulkanRenderer::vkGetDescriptorSetLayoutBindingOffsetEXT = VK_NULL_HANDLE;
-PFN_vkCmdBindDescriptorBuffersEXT VulkanRenderer::vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
-PFN_vkCmdSetDescriptorBufferOffsetsEXT VulkanRenderer::vkCmdSetDescriptorBufferOffsetsEXT;
-
 VulkanRenderer::VulkanRenderer(){}
 
 VulkanRenderer::VulkanRenderer(VulkanContext& context) {
@@ -22,28 +17,14 @@ VulkanRenderer::VulkanRenderer(VulkanContext& context) {
     commandPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                     context.queueFamilyIndices.graphicsFamily.value(),
                                     context.logicalDevice);
-
-    if(vkGetDescriptorSetLayoutSizeEXT == VK_NULL_HANDLE)
-        vkGetDescriptorSetLayoutSizeEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutSizeEXT>(
-                                                      vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutSizeEXT"));
-    if(vkGetDescriptorSetLayoutBindingOffsetEXT == VK_NULL_HANDLE)
-        vkGetDescriptorSetLayoutBindingOffsetEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutBindingOffsetEXT>(
-                                                      vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutBindingOffsetEXT"));
-    if (vkCmdBindDescriptorBuffersEXT == VK_NULL_HANDLE)
-        vkCmdBindDescriptorBuffersEXT = reinterpret_cast<PFN_vkCmdBindDescriptorBuffersEXT>(
-                                                      vkGetDeviceProcAddr(logicalDevice, "vkCmdBindDescriptorBuffersEXT"));
-    if (vkCmdSetDescriptorBufferOffsetsEXT == VK_NULL_HANDLE)
-        vkCmdSetDescriptorBufferOffsetsEXT = reinterpret_cast<PFN_vkCmdSetDescriptorBufferOffsetsEXT>(
-                                                          vkGetDeviceProcAddr(logicalDevice, "vkCmdSetDescriptorBufferOffsetsEXT"));
-    
     createDescriptorPool();
     createDescriptorSetLayouts();
     createUniformBuffers();
+    createDepthResources();
     createDescriptorSets();
     createPipelines();
     createSyncObjects();
     createCommandBuffers();
-
 }
 
 void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
@@ -55,7 +36,9 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     perFrameUBOs[currentFrame].transferData(&ubo, sizeof(ubo));
 
     GlobalUniformBufferObject gubo{};
-    gubo.light = glm::vec4(0.2f, 0.2f, 0.6f, 1.0f);
+    gubo.light = glm::vec3(0.3f, 0.3f, 0.3f);
+    VulkanBuffer globalDescriptorSetBuffer;
+    gubo.lightPosition = glm::vec3(0.f, 0.f, 3.f);
     globalUBO.transferData(&gubo, sizeof(gubo));
 
     //imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next, but it may not 
@@ -113,20 +96,28 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     colorAttachment.clearValue.color = { 0.0f,0.0f,0.0f,0.0f };
 
+    VkRenderingAttachmentInfo depthAttachment{};
+    depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    depthAttachment.imageView = depthImage.vkImageView;
+    depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.clearValue.depthStencil = {1.f, 0};
+
     VkRenderingInfo renderingInfo{};
     renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     renderingInfo.renderArea = { 0, 0, swapchain.extent };
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = 1;
     renderingInfo.pColorAttachments = &colorAttachment;
-    renderingInfo.pDepthAttachment = VK_NULL_HANDLE;
+    renderingInfo.pDepthAttachment = &depthAttachment;
     renderingInfo.pStencilAttachment = VK_NULL_HANDLE;
 
     vkCmdBeginRendering(commandBuffers[currentFrame], &renderingInfo);
 
     vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
 
-    //dynamic states
+    /***dynamic states*********/
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = (float)(swapchain.extent.height);
@@ -140,7 +131,7 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     scissor.offset = { 0, 0 };
     scissor.extent = swapchain.extent;
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
-    //
+    /****************************/
 
     VkDescriptorBufferBindingInfoEXT bindingInfo[2]{};
     bindingInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
@@ -150,21 +141,16 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     bindingInfo[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
     bindingInfo[1].address = perFrameDescriptorSetBuffersDeviceAddr;
     bindingInfo[1].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
-    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
+    VulkanCommon::vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
 
     uint32_t globalBufferIndex = DescriptorSetLayoutIndex::global;
     uint32_t perFrameBufferIndex = DescriptorSetLayoutIndex::perFrame;
     VkDeviceSize bufferOffset = 0;
 
-    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
+    VulkanCommon::vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
                                        pipeline.pipelineLayout, 0, 1, &(globalBufferIndex), &bufferOffset);
-    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+    VulkanCommon::vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                        pipeline.pipelineLayout, 1, 1, &(perFrameBufferIndex), &bufferOffset);
-
-    /*vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeline.pipelineLayout, 0, 1, &globalDescriptorSet, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipeline.pipelineLayout, 1, 1, &perFrameDescriptorSets[currentFrame], 0, nullptr);*/
 }
 
 void VulkanRenderer::draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* vertexBuffers) {
@@ -334,7 +320,7 @@ void VulkanRenderer::createDescriptorSetLayouts() {
 
         descriptorSetLayouts.push_back(layout);
         VkDeviceSize layoutSize;
-        vkGetDescriptorSetLayoutSizeEXT(logicalDevice, layout, &layoutSize);
+        VulkanCommon::vkGetDescriptorSetLayoutSizeEXT(logicalDevice, layout, &layoutSize);
         descriptorSetLayoutSizes.push_back(layoutSize);
     }
 }
@@ -356,6 +342,15 @@ void VulkanRenderer::createUniformBuffers() {
     }
 }
 
+void VulkanRenderer::createDepthResources() {
+    depthFormat = VulkanImageUtils::findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, 
+                                                                  VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL,
+                                                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, physicalDevice);
+    VulkanImageUtils::createImage2D(swapchain.extent.width, swapchain.extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+                                        depthImage, logicalDevice);
+}
+
 void VulkanRenderer::createDescriptorSets() {
     globalDescriptorSetBuffer = VulkanBuffer(descriptorSetLayoutSizes[DescriptorSetLayoutIndex::global],
                                     VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
@@ -370,11 +365,6 @@ void VulkanRenderer::createDescriptorSets() {
                                 logicalDevice, physicalDevice);
     perFrameDescriptorSetBuffers.map();
     perFrameDescriptorSetBuffersDeviceAddr = VulkanBufferUtils::getBufferDeviceAddress(perFrameDescriptorSetBuffers.vkBuffer);
-
-    PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
-                                                                        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
-    PFN_vkGetDescriptorEXT vkGetDescriptorEXT = reinterpret_cast<PFN_vkGetDescriptorEXT>(vkGetDeviceProcAddr(logicalDevice, 
-                                                                        "vkGetDescriptorEXT"));
     
     //need to buffer alignment sizes for each descriptor
     VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProperties{};
@@ -382,7 +372,7 @@ void VulkanRenderer::createDescriptorSets() {
     VkPhysicalDeviceProperties2 deviceProperties{};
     deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
     deviceProperties.pNext = &descriptorBufferProperties;
-    vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
+    VulkanCommon::vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
     
     uniformDescriptorOffset = VulkanBufferUtils::getAlignedBufferSize(descriptorBufferProperties.uniformBufferDescriptorSize,
                                                                      descriptorBufferProperties.descriptorBufferOffsetAlignment);
@@ -395,8 +385,8 @@ void VulkanRenderer::createDescriptorSets() {
     VkDescriptorGetInfoEXT bufferDescriptorInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
     bufferDescriptorInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bufferDescriptorInfo.data.pUniformBuffer = &addressInfo;
-    vkGetDescriptorEXT(logicalDevice, &bufferDescriptorInfo, descriptorBufferProperties.uniformBufferDescriptorSize, 
-                       globalDescriptorSetBuffer.data);
+    VulkanCommon::vkGetDescriptorEXT(logicalDevice, &bufferDescriptorInfo, descriptorBufferProperties.uniformBufferDescriptorSize,
+                                     globalDescriptorSetBuffer.data);
     
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorAddressInfoEXT perFrameAddressInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
@@ -405,75 +395,15 @@ void VulkanRenderer::createDescriptorSets() {
         perFrameAddressInfo.format = VK_FORMAT_UNDEFINED;
         
         bufferDescriptorInfo.data.pUniformBuffer = &perFrameAddressInfo;
-        vkGetDescriptorEXT(logicalDevice, &bufferDescriptorInfo, descriptorBufferProperties.uniformBufferDescriptorSize, 
+        VulkanCommon::vkGetDescriptorEXT(logicalDevice, &bufferDescriptorInfo, descriptorBufferProperties.uniformBufferDescriptorSize, 
                       (char*)perFrameDescriptorSetBuffers.data + i * descriptorSetLayoutSizes[DescriptorSetLayoutIndex::perFrame]);
     }
-    
-    /*
-    //create global descriptor
-    VkDescriptorSetAllocateInfo globalAllocInfo{};
-    globalAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    globalAllocInfo.descriptorPool = descriptorPool;
-    globalAllocInfo.descriptorSetCount = 1;
-    globalAllocInfo.pSetLayouts = &descriptorSetLayouts[DescriptorSetLayoutIndex::global];
-
-    if (vkAllocateDescriptorSets(logicalDevice, &globalAllocInfo, &globalDescriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = globalUBO.vkBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(GlobalUniformBufferObject);
-
-    VkWriteDescriptorSet descriptorWrites{};
-    descriptorWrites.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites.dstSet = globalDescriptorSet;
-    descriptorWrites.dstBinding = 0;
-    descriptorWrites.dstArrayElement = 0;
-    descriptorWrites.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites.descriptorCount = 1;
-    descriptorWrites.pBufferInfo = &bufferInfo;
-
-    vkUpdateDescriptorSets(logicalDevice, 1, &descriptorWrites, 0, nullptr);
-
-    //create per frame uniform descriptors
-    std::vector<VkDescriptorSetLayout> perFramelayouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayouts[DescriptorSetLayoutIndex::perFrame]);
-    VkDescriptorSetAllocateInfo perFrameAllocInfo{};
-    perFrameAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    perFrameAllocInfo.descriptorPool = descriptorPool;
-    perFrameAllocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    perFrameAllocInfo.pSetLayouts = perFramelayouts.data();
-
-    perFrameDescriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(logicalDevice, &perFrameAllocInfo, perFrameDescriptorSets.data()) != VK_SUCCESS) {
-        //std::cout << "error occured" << std::endl;
-        throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo perFrameBufferInfo{};
-        perFrameBufferInfo.buffer = perFrameUBOs[i].vkBuffer;
-        perFrameBufferInfo.offset = 0;
-        perFrameBufferInfo.range = perFrameUBOs[i].size;
-
-        VkWriteDescriptorSet descriptorWrite{};
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = perFrameDescriptorSets[i];
-        descriptorWrite.dstBinding = 0; //only one binding for the projection view matrix
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &perFrameBufferInfo;
-
-        vkUpdateDescriptorSets(logicalDevice, 1, &descriptorWrite, 0, nullptr);
-    }*/
 }
 
 void VulkanRenderer::createPipelines() {
     pipeline = VulkanGraphicsPipeline("./src/shaders/vert.spv", "./src/shaders/frag.spv", 
                                       VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, 
-                                      logicalDevice, swapchain.extent, swapchain.format, descriptorSetLayouts);
+                                      logicalDevice, swapchain.extent, swapchain.format, depthFormat, descriptorSetLayouts);
 }
 
 VulkanRenderer::~VulkanRenderer() {

@@ -13,7 +13,7 @@ public:
 
     VulkanGraphicsPipeline();
     VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
-                           VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& format, 
+                           VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& format, VkFormat& depthFormat,
                            std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
     void cleanup();
 
@@ -21,7 +21,7 @@ private:
     VkDevice logicalDevice;
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
-    static std::vector<char> readFile(const std::string& filename);
+    std::vector<char> readFile(const std::string& filename);
 };
 
 #endif

@@ -95,11 +95,12 @@
     <ClCompile Include="src\Vulkan\VulkanBufferUtils.cpp" />
     <ClCompile Include="src\Vulkan\VulkanCommandPool.cpp" />
     <ClCompile Include="src\Vulkan\VulkanCommandUtils.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanCommon.cpp" />
     <ClCompile Include="src\Vulkan\VulkanContext.cpp" />
     <ClCompile Include="src\Vulkan\VulkanGraphicsPipeline.cpp" />
     <ClCompile Include="src\Vulkan\VulkanRenderer.cpp" />
     <ClCompile Include="src\Vulkan\VulkanSwapchain.cpp" />
-    <ClCompile Include="src\Vulkan\VulkanTexture.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanImage.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -124,7 +125,7 @@
     <ClInclude Include="src\Vulkan\VulkanGraphicsPipeline.h" />
     <ClInclude Include="src\Vulkan\VulkanRenderer.h" />
     <ClInclude Include="src\Vulkan\VulkanSwapchain.h" />
-    <ClInclude Include="src\Vulkan\VulkanTexture.h" />
+    <ClInclude Include="src\Vulkan\VulkanImage.h" />
     <ClInclude Include="src\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

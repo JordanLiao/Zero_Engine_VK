@@ -24,7 +24,7 @@
     <ClCompile Include="src\Vulkan\VulkanContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\VulkanTexture.cpp">
+    <ClCompile Include="src\Vulkan\VulkanImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanSwapchain.cpp">
@@ -81,6 +81,9 @@
     <ClCompile Include="src\Resources\ResourceManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Window.h">
@@ -92,7 +95,7 @@
     <ClInclude Include="src\Vulkan\VulkanCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanTexture.h">
+    <ClInclude Include="src\Vulkan\VulkanImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanBuffer.h">

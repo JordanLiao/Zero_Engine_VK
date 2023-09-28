@@ -1,8 +1,48 @@
-#include "VulkanTexture.h"
+#include "VulkanImage.h"
+#include "VulkanCommandUtils.h"
+#include "VulkanBufferUtils.h"
 
 #include <stdexcept>
 
-VkImageView VulkanTextureUtils::createImageView(VkImage image, VkDevice vDevice, VkFormat format, VkImageAspectFlags aspectFlags) {
+void VulkanImageUtils::createImage2D(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+                                VkMemoryPropertyFlags properties, VulkanImage& image, VkDevice logicalDevice) {
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1; //here we only want a 2d image. We can have >1 for 3d texture
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateImage(logicalDevice, &imageInfo, nullptr, &image.vkImage) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create image!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(logicalDevice, image.vkImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties);
+
+    if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &image.vkDeviceMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate image memory!");
+    }
+
+    vkBindImageMemory(logicalDevice, image.vkImage, image.vkDeviceMemory, 0);
+
+    image.vkImageView = createImageView(image.vkImage, format, VK_IMAGE_ASPECT_DEPTH_BIT, logicalDevice);
+}
+
+VkImageView VulkanImageUtils::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice logicalDevice) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -15,14 +55,14 @@ VkImageView VulkanTextureUtils::createImageView(VkImage image, VkDevice vDevice,
     viewInfo.subresourceRange.layerCount = 1;
 
     VkImageView imageView;
-    if (vkCreateImageView(vDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(logicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture image view!");
     }
 
     return imageView;
 }
 
-void VulkanTextureUtils::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+void VulkanImageUtils::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
                                                VulkanCommandPool& commandPool) {
     VkCommandBuffer commandBuffer = VulkanCommandUtils::beginSingleTimeCommands(commandPool);
 
@@ -90,6 +130,27 @@ void VulkanTextureUtils::transitionImageLayout(VkImage image, VkFormat format, V
     VulkanCommandUtils::endSingleTimeCommands(commandBuffer, commandPool);
 }
 
-bool VulkanTextureUtils::hasStencilComponent(VkFormat format) {
+bool VulkanImageUtils::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+VkFormat VulkanImageUtils::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+                                               VkFormatFeatureFlags features, VkPhysicalDevice pDevice) {
+    for (VkFormat format : candidates) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(pDevice, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            return format;
+        }
+        else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("failed to find supported format!");
+}
+
+void VulkanImage::cleanup()
+{
 }

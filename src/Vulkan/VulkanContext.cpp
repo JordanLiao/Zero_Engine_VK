@@ -1,6 +1,7 @@
 #include "VulkanContext.h"
 #include "VulkanBufferUtils.h"
 #include "VulkanCommandPool.h"
+#include "VulkanCommon.h"
 
 #include <stdexcept>
 #include <set>
@@ -22,6 +23,7 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     VulkanBufferUtils::init(logicalDevice, physicalDevice, VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                                            queueFamilyIndices.transferFamily.value(),
                                                            logicalDevice));
+    VulkanCommon::init(logicalDevice, vulkanInstance);
 }
 
 void VulkanContext::createVulkanInstance() {
