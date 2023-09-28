@@ -22,8 +22,8 @@ namespace VulkanImageUtils {
 
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice logicalDevice);
 
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                               VulkanCommandPool& commandPool);
+    void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout,
+                               VkCommandBuffer commandBuffer);
 
     bool hasStencilComponent(VkFormat format);
 
