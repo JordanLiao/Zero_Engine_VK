@@ -35,7 +35,7 @@ enum DescriptorSetLayoutIndex {
 
 const std::vector<std::vector<DescriptorSetBindingInfo>> descriptorSetLayoutInfos {
     { //global descriptor set
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT}
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT}
     },
     { //per frame descriptor set
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT}
@@ -47,9 +47,11 @@ struct UniformBufferObject {
 };
 
 struct GlobalUniformBufferObject {
-    glm::vec4 light;
-    glm::vec3 what;
+    glm::vec3 lightPosition;
+    alignas(16) glm::vec3 light;
 };
+
+const VkImageSubresourceRange coloredImageSubresourceRange{VK_IMAGE_ASPECT_COLOR_BIT,0,1,0,1,};
 
 class VulkanRenderer {
 public:
@@ -77,10 +79,10 @@ public:
     void cleanup();
 
 private:
-    static PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT;
-    static PFN_vkGetDescriptorSetLayoutBindingOffsetEXT vkGetDescriptorSetLayoutBindingOffsetEXT;
-    static PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT;
-    static PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT;
+    //static PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT;
+    //static PFN_vkGetDescriptorSetLayoutBindingOffsetEXT vkGetDescriptorSetLayoutBindingOffsetEXT;
+    //static PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT;
+    //static PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT;
 
     VkInstance instance;
     VkDevice logicalDevice;
@@ -115,12 +117,16 @@ private:
     std::vector<VulkanBuffer> perFrameUBOs;
     void createUniformBuffers();
 
+    VulkanImage depthImage;
+    VkFormat depthFormat;
+    void createDepthResources();
+
     VkDescriptorSet globalDescriptorSet;
     std::vector<VkDescriptorSet> perFrameDescriptorSets;
 
-    uint32_t uniformDescriptorOffset;
+    uint32_t uniformDescriptorOffset; //size of a uniform descriptor, used for indexing offset
     VulkanBuffer globalDescriptorSetBuffer;
-    VulkanBuffer perFrameDescriptorSetBuffers;
+    VulkanBuffer perFrameDescriptorSetBuffers; //multiple perFrame descriptor sets buffers packed into one.
     VkDeviceAddress globalDescriptorSetBufferDeviceAddr;
     VkDeviceAddress perFrameDescriptorSetBuffersDeviceAddr;
     void createDescriptorSets();

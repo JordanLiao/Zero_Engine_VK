@@ -71,8 +71,7 @@ VulkanSwapchain::VulkanSwapchain(const VulkanContext& context) {
 
     imageViews.resize(images.size());
     for (uint32_t i = 0; i < images.size(); i++) {
-        imageViews[i] = VulkanTextureUtils::createImageView(images[i], logicalDevice, format,
-            VK_IMAGE_ASPECT_COLOR_BIT);
+        imageViews[i] = VulkanImageUtils::createImageView(images[i], format, VK_IMAGE_ASPECT_COLOR_BIT, logicalDevice);
     }
 }
 

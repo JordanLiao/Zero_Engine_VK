@@ -1,7 +1,7 @@
 #ifndef _VULKANSWAPCHAIN_H_
 #define _VULKANSWAPCHAIN_H_
 
-#include "VulkanTexture.h"
+#include "VulkanImage.h"
 
 #include <vulkan/vulkan.h>
 #include <vector>

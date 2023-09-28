@@ -8,7 +8,7 @@
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(){}
 
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
-                                               VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& format, 
+                                               VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& colorFormat, VkFormat& depthFormat, 
                                                std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
     this->logicalDevice = logicalDevice;
     auto vertShaderCode = readFile(vert);
@@ -140,8 +140,8 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo{};
     pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
-    pipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
-    //pipelineRenderingCreateInfo.depthAttachmentFormat = depthFormat;
+    pipelineRenderingCreateInfo.pColorAttachmentFormats = &colorFormat;
+    pipelineRenderingCreateInfo.depthAttachmentFormat = depthFormat;
     //pipelineRenderingCreateInfo.stencilAttachmentFormat = depthFormat;
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
