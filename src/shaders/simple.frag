@@ -10,12 +10,30 @@ layout(set=0,binding = 0) uniform GlobalUniformBufferObject {
     vec3 light;
 } gubo;
 
-void main() {
-    vec3 lightDir = normalize(gubo.lightPosition - inPosition);
-	//lightDir = gubo.lightPosition;
-    vec3 normal = normalize(inNormal);
-    float diffStrength = max(dot(normal, lightDir), 0.0);
-    //float diffStrength = 1.f;
+layout(set=1,binding = 0) uniform UniformBufferObject {
+    mat4 projView;
+	vec3 viewPos;
+} ubo;
 
-    outColor = vec4(gubo.light * diffStrength, 1.0);
+void main() {
+	vec3 color = vec3(1.0);
+	float specHighlight = 10.0;
+
+    vec3 normal = normalize(inNormal);
+    
+	vec3 lightDir = normalize(gubo.lightPosition - inPosition);
+	lightDir = gubo.lightPosition;
+    float diffStrength = max(dot(normal, lightDir), 0.0);
+	vec3 diffuse = diffStrength * color;
+
+    vec3 viewDir = normalize(ubo.viewPos - inPosition);
+	vec3 halfVec = normalize(viewDir + lightDir);	
+	vec3 reflectDir = reflect(-lightDir, normal);  
+	float spec = 0.0;
+	if(specHighlight > 0.0) {
+	  spec = pow(max(dot(halfVec, normal), 0.0), specHighlight);
+	}
+	vec3 specular = spec * color * (specHighlight + 2) / 6.283;  
+
+	outColor = vec4(diffuse + specular, 1.0);
 }

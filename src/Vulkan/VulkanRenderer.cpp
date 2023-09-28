@@ -33,12 +33,13 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
 
     UniformBufferObject ubo{};
     ubo.projView = projView;
+    ubo.viewPos = glm::vec3(0.f, 0.f, 3.f);
     perFrameUBOs[currentFrame].transferData(&ubo, sizeof(ubo));
 
     GlobalUniformBufferObject gubo{};
     gubo.light = glm::vec3(0.3f, 0.3f, 0.3f);
     VulkanBuffer globalDescriptorSetBuffer;
-    gubo.lightPosition = glm::vec3(0.f, 0.f, 3.f);
+    gubo.lightPosition = glm::vec3(10.f, 10.f, 0.f);
     globalUBO.transferData(&gubo, sizeof(gubo));
 
     //imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next, but it may not 
@@ -60,33 +61,8 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    VkImageSubresourceRange subresourceRange{};
-    subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subresourceRange.baseMipLevel = 0;
-    subresourceRange.levelCount = 1;
-    subresourceRange.baseArrayLayer = 0;
-    subresourceRange.layerCount = 1;
-
-    VkImageMemoryBarrier imageToRenderBarrier{};
-    imageToRenderBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    imageToRenderBarrier.srcAccessMask = 0;
-    imageToRenderBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageToRenderBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    imageToRenderBarrier.image = swapchain.images[imageIndex];
-    imageToRenderBarrier.subresourceRange = subresourceRange;
-
-    vkCmdPipelineBarrier(
-        commandBuffers[currentFrame],
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,  // srcStageMask
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // dstStageMask
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1, // imageMemoryBarrierCount
-        &imageToRenderBarrier // pImageMemoryBarriers
-    );
+    VulkanImageUtils::transitionImageLayout(swapchain.images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, 
+                                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, commandBuffers[currentFrame]);
 
     VkRenderingAttachmentInfo colorAttachment{};
     colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
@@ -117,7 +93,7 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
 
     vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
 
-    /***dynamic states*********/
+    /***dynamic states************/
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = (float)(swapchain.extent.height);
@@ -137,7 +113,7 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     bindingInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
     bindingInfo[0].address = globalDescriptorSetBufferDeviceAddr;
     bindingInfo[0].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
-    // Binding 1 = Image
+
     bindingInfo[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
     bindingInfo[1].address = perFrameDescriptorSetBuffersDeviceAddr;
     bindingInfo[1].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
@@ -164,33 +140,8 @@ void VulkanRenderer::draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* v
 void VulkanRenderer::submitDrawCalls() {
     vkCmdEndRendering(commandBuffers[currentFrame]);
 
-    VkImageSubresourceRange subresourceRange{};
-    subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subresourceRange.baseMipLevel = 0;
-    subresourceRange.levelCount = 1;
-    subresourceRange.baseArrayLayer = 0;
-    subresourceRange.layerCount = 1;
-
-    VkImageMemoryBarrier imageToPresentBarrier{};
-    imageToPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    imageToPresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    imageToPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    imageToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    imageToPresentBarrier.image = swapchain.images[imageIndex];
-    imageToPresentBarrier.subresourceRange = subresourceRange;
-
-    vkCmdPipelineBarrier(
-        commandBuffers[currentFrame],
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // dstStageMask
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1, // imageMemoryBarrierCount
-        &imageToPresentBarrier // pImageMemoryBarriers
-    );
+    VulkanImageUtils::transitionImageLayout(swapchain.images[imageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, commandBuffers[currentFrame]);
 
     if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
@@ -404,10 +355,6 @@ void VulkanRenderer::createPipelines() {
     pipeline = VulkanGraphicsPipeline("./src/shaders/vert.spv", "./src/shaders/frag.spv", 
                                       VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, 
                                       logicalDevice, swapchain.extent, swapchain.format, depthFormat, descriptorSetLayouts);
-}
-
-VulkanRenderer::~VulkanRenderer() {
-	cleanup();
 }
 
 void VulkanRenderer::cleanup() {

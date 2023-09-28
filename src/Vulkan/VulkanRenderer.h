@@ -38,12 +38,13 @@ const std::vector<std::vector<DescriptorSetBindingInfo>> descriptorSetLayoutInfo
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT}
     },
     { //per frame descriptor set
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT}
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
     } 
 };
 
 struct UniformBufferObject {
     glm::mat4 projView;
+    glm::vec3 viewPos;
 };
 
 struct GlobalUniformBufferObject {
@@ -75,7 +76,6 @@ public:
     */
     void submitDrawCalls();
 
-    ~VulkanRenderer();
     void cleanup();
 
 private:
