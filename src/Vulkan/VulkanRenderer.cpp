@@ -17,6 +17,18 @@ VulkanRenderer::VulkanRenderer(VulkanContext& context) {
     commandPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                     context.queueFamilyIndices.graphicsFamily.value(),
                                     context.logicalDevice);
+
+    vkGetDescriptorSetLayoutSizeEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutSizeEXT>(
+                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutSizeEXT"));
+    vkGetDescriptorSetLayoutBindingOffsetEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutBindingOffsetEXT>(
+                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutBindingOffsetEXT"));
+    vkCmdBindDescriptorBuffersEXT = reinterpret_cast<PFN_vkCmdBindDescriptorBuffersEXT>(
+                            vkGetDeviceProcAddr(logicalDevice, "vkCmdBindDescriptorBuffersEXT"));
+    vkCmdSetDescriptorBufferOffsetsEXT = reinterpret_cast<PFN_vkCmdSetDescriptorBufferOffsetsEXT>(
+                            vkGetDeviceProcAddr(logicalDevice, "vkCmdSetDescriptorBufferOffsetsEXT"));
+    vkGetDescriptorEXT = reinterpret_cast<PFN_vkGetDescriptorEXT>(
+                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorEXT"));
+
     createDescriptorPool();
     createDescriptorSetLayouts();
     createUniformBuffers();
@@ -33,14 +45,25 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
 
     UniformBufferObject ubo{};
     ubo.projView = projView;
-    ubo.viewPos = glm::vec3(0.f, 0.f, 3.f);
+    ubo.viewPos = glm::vec3(0.f, 0.f, 5.f);
     perFrameUBOs[currentFrame].transferData(&ubo, sizeof(ubo));
+    
+    GlobalUniformBufferObject gubo[4];
+    gubo[0].light = glm::vec3(1.f, 0.f, 0.f);
+    gubo[1].light = glm::vec3(0.5f, 0.5f, 0.f);
+    gubo[2].light = glm::vec3(0.f, 0.5f, 0.5f);
+    gubo[3].light = glm::vec3(0.f, 0.f, 1.f);
+    gubo[0].lightPosition = glm::vec3(-15.f, 5.f, 0.f);
+    gubo[1].lightPosition = glm::vec3(-3.33f, 10.f, 0.f);
+    gubo[2].lightPosition = glm::vec3(3.33f, 10.f, 0.f);
+    gubo[3].lightPosition = glm::vec3(10.f, 5.f, 0.f);
 
-    GlobalUniformBufferObject gubo{};
-    gubo.light = glm::vec3(0.3f, 0.3f, 0.3f);
-    VulkanBuffer globalDescriptorSetBuffer;
-    gubo.lightPosition = glm::vec3(10.f, 10.f, 0.f);
-    globalUBO.transferData(&gubo, sizeof(gubo));
+    int s = sizeof(GlobalUniformBufferObject);
+    globalUBO[0].transferData(gubo, sizeof(GlobalUniformBufferObject));
+    globalUBO[1].transferData(gubo + 1, sizeof(GlobalUniformBufferObject));
+    globalUBO[2].transferData(gubo + 2, sizeof(GlobalUniformBufferObject));
+    globalUBO[3].transferData(gubo + 3, sizeof(GlobalUniformBufferObject));
+
 
     //imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next, but it may not 
     //be available immediately, so a semaphore is needed to synchronize vkcommands that depend on the image.
@@ -97,6 +120,7 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = (float)(swapchain.extent.height);
+    //viewport.y = 0.f;
     viewport.width = (float)(swapchain.extent.width);
     viewport.height = -(float)(swapchain.extent.height);
     viewport.minDepth = 0.0f;
@@ -109,24 +133,23 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
     /****************************/
 
+    uint32_t globalIndex = DescriptorSetLayoutIndex::global;
+    uint32_t perFrameIndex = DescriptorSetLayoutIndex::perFrame;
     VkDescriptorBufferBindingInfoEXT bindingInfo[2]{};
-    bindingInfo[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    bindingInfo[0].address = globalDescriptorSetBufferDeviceAddr;
-    bindingInfo[0].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
+    bindingInfo[globalIndex].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    bindingInfo[globalIndex].address = globalDescriptorSetBufferDeviceAddr;
+    bindingInfo[globalIndex].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
 
-    bindingInfo[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    bindingInfo[1].address = perFrameDescriptorSetBuffersDeviceAddr;
-    bindingInfo[1].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
-    VulkanCommon::vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
+    bindingInfo[perFrameIndex].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    bindingInfo[perFrameIndex].address = perFrameDescriptorSetBuffersDeviceAddr;
+    bindingInfo[perFrameIndex].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
+    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
 
-    uint32_t globalBufferIndex = DescriptorSetLayoutIndex::global;
-    uint32_t perFrameBufferIndex = DescriptorSetLayoutIndex::perFrame;
     VkDeviceSize bufferOffset = 0;
-
-    VulkanCommon::vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                                       pipeline.pipelineLayout, 0, 1, &(globalBufferIndex), &bufferOffset);
-    VulkanCommon::vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                       pipeline.pipelineLayout, 1, 1, &(perFrameBufferIndex), &bufferOffset);
+    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                                       pipeline.pipelineLayout, 0, 1, &globalIndex, &bufferOffset);
+    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                       pipeline.pipelineLayout, 1, 1, &perFrameIndex, &bufferOffset);
 }
 
 void VulkanRenderer::draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* vertexBuffers) {
@@ -249,7 +272,7 @@ void VulkanRenderer::createDescriptorSetLayouts() {
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
     for(const std::vector<DescriptorSetBindingInfo>& layoutInfo: descriptorSetLayoutInfos) {
-        std::vector<VkDescriptorSetLayoutBinding> perFrameDescriptorSetBindings(layoutInfo.size());
+        std::vector<VkDescriptorSetLayoutBinding> bindings(layoutInfo.size());
         int i = 0;
         for (size_t i = 0; i < layoutInfo.size(); i++) {
             VkDescriptorSetLayoutBinding layoutBinding{};
@@ -258,11 +281,11 @@ void VulkanRenderer::createDescriptorSetLayouts() {
             layoutBinding.descriptorType = layoutInfo[i].type;
             layoutBinding.stageFlags = layoutInfo[i].stageFlags;
             layoutBinding.pImmutableSamplers = nullptr;
-            perFrameDescriptorSetBindings[i] = layoutBinding;
+            bindings[i] = layoutBinding;
         }
 
         layoutCreateInfo.bindingCount = (uint32_t)layoutInfo.size();
-        layoutCreateInfo.pBindings = perFrameDescriptorSetBindings.data();
+        layoutCreateInfo.pBindings = bindings.data();
 
         VkDescriptorSetLayout layout;
         if (vkCreateDescriptorSetLayout(logicalDevice, &layoutCreateInfo, nullptr, &layout) != VK_SUCCESS) {
@@ -271,17 +294,20 @@ void VulkanRenderer::createDescriptorSetLayouts() {
 
         descriptorSetLayouts.push_back(layout);
         VkDeviceSize layoutSize;
-        VulkanCommon::vkGetDescriptorSetLayoutSizeEXT(logicalDevice, layout, &layoutSize);
+        vkGetDescriptorSetLayoutSizeEXT(logicalDevice, layout, &layoutSize);
         descriptorSetLayoutSizes.push_back(layoutSize);
     }
 }
 
 void VulkanRenderer::createUniformBuffers() {
-    globalUBO = VulkanBuffer(sizeof(GlobalUniformBufferObject), 
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                             logicalDevice, physicalDevice);
-    globalUBO.map();
+    globalUBO.resize(descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].numDescriptor);
+    for (int i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].numDescriptor; i++) {
+        globalUBO[i] = VulkanBuffer(sizeof(GlobalUniformBufferObject),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            logicalDevice, physicalDevice);
+        globalUBO[i].map();
+    }
 
     perFrameUBOs.reserve(MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -317,7 +343,7 @@ void VulkanRenderer::createDescriptorSets() {
     perFrameDescriptorSetBuffers.map();
     perFrameDescriptorSetBuffersDeviceAddr = VulkanBufferUtils::getBufferDeviceAddress(perFrameDescriptorSetBuffers.vkBuffer);
     
-    //need to buffer alignment sizes for each descriptor
+    //need buffer alignment sizes for each descriptor
     VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProperties{};
     descriptorBufferProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
     VkPhysicalDeviceProperties2 deviceProperties{};
@@ -325,19 +351,25 @@ void VulkanRenderer::createDescriptorSets() {
     deviceProperties.pNext = &descriptorBufferProperties;
     VulkanCommon::vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
     
-    uniformDescriptorOffset = VulkanBufferUtils::getAlignedBufferSize(descriptorBufferProperties.uniformBufferDescriptorSize,
-                                                                     descriptorBufferProperties.descriptorBufferOffsetAlignment);
+    //uniformDescriptorOffset = VulkanBufferUtils::getAlignedBufferSize(descriptorBufferProperties.uniformBufferDescriptorSize,
+    //                                                                 descriptorBufferProperties.descriptorBufferOffsetAlignment);
 
-    VkDescriptorAddressInfoEXT addressInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
-    addressInfo.address =  VulkanBufferUtils::getBufferDeviceAddress(globalUBO.vkBuffer);
-    addressInfo.range = globalUBO.size;
-    addressInfo.format = VK_FORMAT_UNDEFINED;
+    VkDescriptorAddressInfoEXT globalAddressInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
+    globalAddressInfo.range = sizeof(GlobalUniformBufferObject);
+    globalAddressInfo.format = VK_FORMAT_UNDEFINED;
 
-    VkDescriptorGetInfoEXT bufferDescriptorInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
-    bufferDescriptorInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bufferDescriptorInfo.data.pUniformBuffer = &addressInfo;
-    VulkanCommon::vkGetDescriptorEXT(logicalDevice, &bufferDescriptorInfo, descriptorBufferProperties.uniformBufferDescriptorSize,
-                                     globalDescriptorSetBuffer.data);
+    //fill the descriptor set buffers with actual descriptor sets
+    VkDescriptorGetInfoEXT globalGetInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
+    globalGetInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    globalGetInfo.data.pUniformBuffer = &globalAddressInfo;
+
+    //actually must get the descriptor for 
+    for (int i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].numDescriptor; i++) {
+        globalAddressInfo.address = VulkanBufferUtils::getBufferDeviceAddress(globalUBO[i].vkBuffer);
+        
+        vkGetDescriptorEXT(logicalDevice, &globalGetInfo, descriptorBufferProperties.uniformBufferDescriptorSize,
+            (char*)globalDescriptorSetBuffer.data + i * descriptorBufferProperties.uniformBufferDescriptorSize);
+    }
     
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorAddressInfoEXT perFrameAddressInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
@@ -345,8 +377,11 @@ void VulkanRenderer::createDescriptorSets() {
         perFrameAddressInfo.range = perFrameUBOs[i].size;
         perFrameAddressInfo.format = VK_FORMAT_UNDEFINED;
         
-        bufferDescriptorInfo.data.pUniformBuffer = &perFrameAddressInfo;
-        VulkanCommon::vkGetDescriptorEXT(logicalDevice, &bufferDescriptorInfo, descriptorBufferProperties.uniformBufferDescriptorSize, 
+        VkDescriptorGetInfoEXT perFrameGetInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
+        perFrameGetInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        perFrameGetInfo.data.pUniformBuffer = &perFrameAddressInfo;
+        //offset by the size of a one descriptor set.
+        vkGetDescriptorEXT(logicalDevice, &perFrameGetInfo, descriptorBufferProperties.uniformBufferDescriptorSize,
                       (char*)perFrameDescriptorSetBuffers.data + i * descriptorSetLayoutSizes[DescriptorSetLayoutIndex::perFrame]);
     }
 }

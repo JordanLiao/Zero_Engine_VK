@@ -39,6 +39,7 @@ public:
     VkBuffer vkBuffer;
     void* data;
     VkDeviceSize size;
+    VkDeviceSize deviceSize;
 
     VulkanBuffer();
     VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
