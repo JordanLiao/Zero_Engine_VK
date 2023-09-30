@@ -128,6 +128,10 @@
     <ClInclude Include="src\Vulkan\VulkanImage.h" />
     <ClInclude Include="src\Window.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\shaders\simple.frag" />
+    <None Include="src\shaders\simple.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -7,6 +7,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanBufferArray.h"
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/glm.hpp"
 #include <vulkan/vulkan.h>
 
@@ -33,9 +34,12 @@ enum DescriptorSetLayoutIndex {
     perFrame,
 };
 
+/*
+    From top level to bottom: per set layout, per binding
+*/
 const std::vector<std::vector<DescriptorSetBindingInfo>> descriptorSetLayoutInfos {
     { //global descriptor set
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT}
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4, VK_SHADER_STAGE_FRAGMENT_BIT}
     },
     { //per frame descriptor set
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
@@ -59,7 +63,7 @@ public:
     VulkanRenderer();
     VulkanRenderer(VulkanContext& context);
 
-    VulkanBuffer globalUBO;
+    std::vector<VulkanBuffer> globalUBO;
     /*
 	    Resets the currentFrame's commandBuffer, and make ready the renderer to record
 	    draw commands.
@@ -79,10 +83,11 @@ public:
     void cleanup();
 
 private:
-    //static PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT;
-    //static PFN_vkGetDescriptorSetLayoutBindingOffsetEXT vkGetDescriptorSetLayoutBindingOffsetEXT;
-    //static PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT;
-    //static PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT;
+    PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT = VK_NULL_HANDLE;
+    PFN_vkGetDescriptorSetLayoutBindingOffsetEXT vkGetDescriptorSetLayoutBindingOffsetEXT = VK_NULL_HANDLE;
+    PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
+    PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
+    PFN_vkGetDescriptorEXT vkGetDescriptorEXT = VK_NULL_HANDLE;
 
     VkInstance instance;
     VkDevice logicalDevice;

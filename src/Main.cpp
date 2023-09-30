@@ -11,6 +11,7 @@
 #include "GraphicsBuffers.h"
 #include "Graphics/Object.h"
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/gtx/transform.hpp"
 
 #include "../Resources/ResourceManager.h"
@@ -41,7 +42,7 @@ int main(int argc, char* argv[]) {
     Object* obj = ResourceManager::loadObject("./assets/bunny.obj");
 
     glm::mat4 projView = glm::perspective(glm::radians(50.0f), (float)width / (float)height, 1.0f, 100.0f) *
-                         glm::lookAt(glm::vec3(0.f, 0.f, 3.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+                         glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 
 	while (!glfwWindowShouldClose(window.window)) {
 		glfwPollEvents();

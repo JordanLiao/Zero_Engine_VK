@@ -30,6 +30,8 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(logicalDevice, vkBuffer, &memRequirements);
 
+    deviceSize = memRequirements.size;
+
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
@@ -61,7 +63,7 @@ void  VulkanBuffer::unmap(){
 }
 
 void VulkanBuffer::transferData(const void* src, size_t size) {
-    memcpy(data, src, size);
+    memcpy(data,src, size);
 }
 
 void VulkanBuffer::cleanup() {
