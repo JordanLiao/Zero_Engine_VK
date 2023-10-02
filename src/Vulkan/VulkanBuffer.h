@@ -34,25 +34,25 @@ namespace VulkanVertexBufferInfo {
     };
 }
 
+class VulkanContext;
+
 class VulkanBuffer {
 public:
     VkBuffer vkBuffer;
     void* data;
-    VkDeviceSize size;
+    VkDeviceSize hostSize;
     VkDeviceSize deviceSize;
 
     VulkanBuffer();
-    VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-                 VkDevice& logicalDevice, VkPhysicalDevice& physicalDevice);
+    VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context);
     VkResult map();
     void unmap();
     void transferData(const void* src, size_t size);
     void cleanup();
  
 private:
-    VkDevice logicalDevice;
+    VulkanContext* context;
     VkDeviceMemory bufferMemory;
-    //mapped device memory handle
 };
 
 #endif

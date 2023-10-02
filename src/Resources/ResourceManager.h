@@ -40,7 +40,7 @@ struct BonesForVertex {
 class ResourceManager {
 private:
     static bool initialized;
-    static VulkanContext vulkanContext;
+    static VulkanContext* vulkanContext;
     static VulkanCommandPool vulkanCommandPool;
 
 	//map of texture name to texture id
@@ -54,7 +54,7 @@ public:
 	static std::unordered_map<std::string, Object*> objMap;
 	static std::list<Object*> objList;
 
-	static void init(VulkanContext& context);
+	static void init(VulkanContext* context);
     static void cleanup();
 
 	static uint32_t getTextureId(std::string& textureName);

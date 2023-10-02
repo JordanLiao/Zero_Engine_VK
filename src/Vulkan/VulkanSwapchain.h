@@ -25,13 +25,11 @@ public:
     VkExtent2D extent;
 
     VulkanSwapchain();
-    VulkanSwapchain(const VulkanContext& vulkanContext);
+    VulkanSwapchain(VulkanContext* vulkanContext);
     void cleanup();
 
 private:
-    VkDevice logicalDevice;
-    //VkPhysicalDevice physicalDevice;
-    VkSurfaceKHR surface;
+    VulkanContext* context;
 
     SwapchainSupportDetails querySwapchainSupport(VkSurfaceKHR surface, VkPhysicalDevice device);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

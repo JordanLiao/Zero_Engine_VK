@@ -14,19 +14,31 @@ VulkanContext::VulkanContext() {}
 
 VulkanContext::VulkanContext(GLFWwindow* window) {
     this->window = window;
-    createVulkanInstance();
+    createInstance();
     createSurface();
     pickPhysicalDevice();
     //save queue family indices only after physicalDevice is set
     queueFamilyIndices = findQueueFamilies(physicalDevice); 
     createLogicalDevice();
-    VulkanBufferUtils::init(logicalDevice, physicalDevice, VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                                                           queueFamilyIndices.transferFamily.value(),
-                                                           logicalDevice));
-    VulkanCommon::init(logicalDevice, vulkanInstance);
+    
+    vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
+                                        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
+    vkGetDescriptorEXT = reinterpret_cast<PFN_vkGetDescriptorEXT>(
+                                        vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorEXT"));
+    vkGetDescriptorSetLayoutSizeEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutSizeEXT>(
+                                      vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutSizeEXT"));
+    vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(vkGetDeviceProcAddr(logicalDevice,
+                                  "vkGetBufferDeviceAddressKHR"));
+
+    descriptorBufferProperties = new VkPhysicalDeviceDescriptorBufferPropertiesEXT{};
+    descriptorBufferProperties->sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
+    VkPhysicalDeviceProperties2 deviceProperties{};
+    deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+    deviceProperties.pNext = descriptorBufferProperties;
+    vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
 }
 
-void VulkanContext::createVulkanInstance() {
+void VulkanContext::createInstance() {
     VkApplicationInfo appInfo{}; //optional
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Zero Engine";
@@ -69,7 +81,7 @@ void VulkanContext::createVulkanInstance() {
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateInstance(&createInfo, nullptr, &vulkanInstance) != VK_SUCCESS) {
+    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
 }
@@ -99,18 +111,18 @@ bool VulkanContext::checkValidationLayerSupport() {
 }
 
 void VulkanContext::createSurface() {
-    if(glfwCreateWindowSurface(vulkanInstance, window, nullptr, &surface) != VK_SUCCESS)
+    if(glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
         throw std::runtime_error("failed to create window surface!");
 }
 
 void VulkanContext::pickPhysicalDevice() {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, nullptr);
+    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
     if (deviceCount == 0)
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, devices.data());
+    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
     for (const auto& pDevice : devices) {
         if (isDeviceSuitable(pDevice)) {
@@ -242,9 +254,8 @@ void VulkanContext::createLogicalDevice() {
 
 void VulkanContext::cleanup() {
     vkDestroyDevice(logicalDevice, nullptr);
-    vkDestroySurfaceKHR(vulkanInstance, surface, nullptr);
-    vkDestroyInstance(vulkanInstance, nullptr);
+    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroyInstance(instance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
-    VulkanBufferUtils::cleanup();
 }
