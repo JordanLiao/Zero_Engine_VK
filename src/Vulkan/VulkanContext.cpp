@@ -67,7 +67,7 @@ void VulkanContext::createInstance() {
         extensions.push_back(ex);
     }
 
-    createInfo.enabledExtensionCount = extensions.size();
+    createInfo.enabledExtensionCount = (uint32_t)extensions.size();
     createInfo.ppEnabledExtensionNames = extensions.data();
 
 
