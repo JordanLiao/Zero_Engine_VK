@@ -5,6 +5,7 @@
 #include <vector>
 
 class VulkanBuffer;
+class VulkanContext;
 
 class VulkanBufferArray {
 public:
@@ -13,7 +14,7 @@ public:
 
     VulkanBufferArray();
     VulkanBufferArray(uint32_t count, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                      VkDevice& logicalDevice, VkPhysicalDevice& physicalDevice);
+                      VulkanContext* context);
 
     void cleanup();
 };

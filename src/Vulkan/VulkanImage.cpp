@@ -1,11 +1,12 @@
 #include "VulkanImage.h"
 #include "VulkanCommandUtils.h"
 #include "VulkanBufferUtils.h"
+#include "VulkanContext.h"
 
 #include <stdexcept>
 
 void VulkanImageUtils::createImage2D(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-                                VkMemoryPropertyFlags properties, VulkanImage& image, VkDevice logicalDevice) {
+                                VkMemoryPropertyFlags properties, VulkanImage& image, VulkanContext* context) {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -21,25 +22,25 @@ void VulkanImageUtils::createImage2D(uint32_t width, uint32_t height, VkFormat f
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(logicalDevice, &imageInfo, nullptr, &image.vkImage) != VK_SUCCESS) {
+    if (vkCreateImage(context->logicalDevice, &imageInfo, nullptr, &image.vkImage) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(logicalDevice, image.vkImage, &memRequirements);
+    vkGetImageMemoryRequirements(context->logicalDevice, image.vkImage, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties, context);
 
-    if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &image.vkDeviceMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(context->logicalDevice, &allocInfo, nullptr, &image.vkDeviceMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
     }
 
-    vkBindImageMemory(logicalDevice, image.vkImage, image.vkDeviceMemory, 0);
+    vkBindImageMemory(context->logicalDevice, image.vkImage, image.vkDeviceMemory, 0);
 
-    image.vkImageView = createImageView(image.vkImage, format, VK_IMAGE_ASPECT_DEPTH_BIT, logicalDevice);
+    image.vkImageView = createImageView(image.vkImage, format, VK_IMAGE_ASPECT_DEPTH_BIT, context->logicalDevice);
 }
 
 VkImageView VulkanImageUtils::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice logicalDevice) {
@@ -151,8 +152,4 @@ VkFormat VulkanImageUtils::findSupportedFormat(const std::vector<VkFormat>& cand
     }
 
     throw std::runtime_error("failed to find supported format!");
-}
-
-void VulkanImage::cleanup()
-{
 }

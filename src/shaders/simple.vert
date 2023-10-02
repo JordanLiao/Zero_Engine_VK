@@ -14,7 +14,7 @@ layout(set=1,binding = 0) uniform UniformBufferObject {
 void main() {
     mat4 model = mat4(1.f);
     gl_Position = ubo.projView * vec4(inPosition, 1.0f);
-    outPosition = inPosition;
-    //outNormal = normalize(mat3(transpose(inverse(model))) * inNormal);
-    outNormal = inNormal;
+    outPosition = vec3(model * vec4(inPosition, 1.0));
+    outNormal = normalize(mat3(transpose(inverse(model))) * inNormal);
+    //outNormal = inNormal;
 }

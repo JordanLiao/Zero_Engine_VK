@@ -6,19 +6,18 @@
 #include <vector>
 
 class VulkanCommandPool;
+class VulkanContext;
 
 struct VulkanImage {
     uint32_t width, height;
     VkImage vkImage;
     VkDeviceMemory vkDeviceMemory;
     VkImageView vkImageView;
-
-    void cleanup();
 };
 
 namespace VulkanImageUtils {
     void createImage2D(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-                     VkMemoryPropertyFlags properties, VulkanImage& image, VkDevice logicalDevice);
+                     VkMemoryPropertyFlags properties, VulkanImage& image, VulkanContext* context);
 
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice logicalDevice);
 

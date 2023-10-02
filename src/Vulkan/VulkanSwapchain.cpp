@@ -9,19 +9,16 @@ VulkanSwapchain::VulkanSwapchain() {
     swapchain = VK_NULL_HANDLE;
     format = VK_FORMAT_B8G8R8A8_SRGB;
     extent = { 1,1 };
-    logicalDevice = VK_NULL_HANDLE;
-    surface = VK_NULL_HANDLE;
+    context = nullptr;
 }
 
-VulkanSwapchain::VulkanSwapchain(const VulkanContext& context) {
-    logicalDevice = context.logicalDevice;
-    //physicalDevice = context.physicalDevice;
-    surface = context.surface;
+VulkanSwapchain::VulkanSwapchain(VulkanContext* context) {
+    this->context = context;
 
-    SwapchainSupportDetails support = querySwapchainSupport(context.surface, context.physicalDevice);
+    SwapchainSupportDetails support = querySwapchainSupport(context->surface, context->physicalDevice);
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(support.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(support.presentModes);
-    VkExtent2D extent = chooseSwapExtent(context.window, support.capabilities);
+    VkExtent2D extent = chooseSwapExtent(context->window, support.capabilities);
 
     //stored for later
     this->extent = extent;
@@ -36,7 +33,7 @@ VulkanSwapchain::VulkanSwapchain(const VulkanContext& context) {
       
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = context.surface;
+    createInfo.surface = context->surface;
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -44,8 +41,8 @@ VulkanSwapchain::VulkanSwapchain(const VulkanContext& context) {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    uint32_t queueFamilyIndices[] = { context.queueFamilyIndices.graphicsFamily.value(), 
-                                      context.queueFamilyIndices.presentFamily.value() };
+    uint32_t queueFamilyIndices[] = { context->queueFamilyIndices.graphicsFamily.value(), 
+                                      context->queueFamilyIndices.presentFamily.value() };
     if (queueFamilyIndices[0] != queueFamilyIndices[1]) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = 2;
@@ -61,17 +58,17 @@ VulkanSwapchain::VulkanSwapchain(const VulkanContext& context) {
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
-    if (vkCreateSwapchainKHR(logicalDevice, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(context->logicalDevice, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(logicalDevice, swapchain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, nullptr);
     images.resize(imageCount);
-    vkGetSwapchainImagesKHR(logicalDevice, swapchain, &imageCount, images.data());
+    vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, images.data());
 
     imageViews.resize(images.size());
     for (uint32_t i = 0; i < images.size(); i++) {
-        imageViews[i] = VulkanImageUtils::createImageView(images[i], format, VK_IMAGE_ASPECT_COLOR_BIT, logicalDevice);
+        imageViews[i] = VulkanImageUtils::createImageView(images[i], format, VK_IMAGE_ASPECT_COLOR_BIT, context->logicalDevice);
     }
 }
 
@@ -137,8 +134,8 @@ SwapchainSupportDetails VulkanSwapchain::querySwapchainSupport(VkSurfaceKHR surf
 
 void VulkanSwapchain::cleanup() {
     for (size_t i = 0; i < imageViews.size(); i++)
-        vkDestroyImageView(logicalDevice, imageViews[i], nullptr);
+        vkDestroyImageView(context->logicalDevice, imageViews[i], nullptr);
 
     if(swapchain != VK_NULL_HANDLE)
-        vkDestroySwapchainKHR(logicalDevice, swapchain, nullptr);
+        vkDestroySwapchainKHR(context->logicalDevice, swapchain, nullptr);
 }

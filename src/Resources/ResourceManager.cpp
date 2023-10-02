@@ -46,14 +46,14 @@ std::list<Object*> ResourceManager::objList;
 bool ResourceManager::initialized;
 
 
-VulkanContext ResourceManager::vulkanContext;
+VulkanContext* ResourceManager::vulkanContext;
 VulkanCommandPool ResourceManager::vulkanCommandPool;
 
-void ResourceManager::init(VulkanContext& context) {
+void ResourceManager::init(VulkanContext* context) {
     vulkanContext = context;
-    VulkanCommandPool transferCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                                          vulkanContext.queueFamilyIndices.transferFamily.value(),
-                                          vulkanContext.logicalDevice);
+    vulkanCommandPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                                          vulkanContext->queueFamilyIndices.transferFamily.value(),
+                                          vulkanContext->logicalDevice);
     initialized = true;
 }
 
@@ -182,8 +182,8 @@ Object* ResourceManager::loadObject(const char* fPath) {
 	//if(pScene->HasAnimations())
 		//processAnimations(pScene, obj, obj->boneNameToID);
 
-    obj->vulkanVertexBuffers = VulkanBufferUtils::createVertexBuffers(vertexBuffer);
-    obj->vulkanIndexBuffer = VulkanBufferUtils::createIndexBuffer(indexbuffer);
+    obj->vulkanVertexBuffers = VulkanBufferUtils::createVertexBuffers(vertexBuffer, vulkanCommandPool, vulkanContext);
+    obj->vulkanIndexBuffer = VulkanBufferUtils::createIndexBuffer(indexbuffer, vulkanCommandPool, vulkanContext);
 
 	return obj;
 }

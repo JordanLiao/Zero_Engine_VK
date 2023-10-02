@@ -13,8 +13,8 @@ public:
 
     VulkanGraphicsPipeline();
     VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
-                           VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& format, VkFormat& depthFormat,
-                           std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
+                           VkExtent2D& extent, VkFormat& format, VkFormat& depthFormat,
+                           std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VkDevice logicalDevice);
     void cleanup();
 
 private:

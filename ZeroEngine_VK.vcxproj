@@ -99,6 +99,7 @@
     <ClCompile Include="src\Vulkan\VulkanContext.cpp" />
     <ClCompile Include="src\Vulkan\VulkanGraphicsPipeline.cpp" />
     <ClCompile Include="src\Vulkan\VulkanRenderer.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanRendererUtils.cpp" />
     <ClCompile Include="src\Vulkan\VulkanSwapchain.cpp" />
     <ClCompile Include="src\Vulkan\VulkanImage.cpp" />
     <ClCompile Include="src\Window.cpp" />
@@ -108,7 +109,7 @@
     <ClInclude Include="src\Graphics\Instance.h" />
     <ClInclude Include="src\Graphics\SkeletalAnimation.h" />
     <ClInclude Include="src\Resources\ResourceManager.h" />
-    <ClInclude Include="src\Vulkan\GraphicsBuffers.h" />
+    <ClInclude Include="src\Resources\GraphicsBuffers.h" />
     <ClInclude Include="src\Graphics\Mesh.h" />
     <ClInclude Include="src\Graphics\Node.h" />
     <ClInclude Include="src\Graphics\Object.h" />
@@ -122,8 +123,10 @@
     <ClInclude Include="src\Vulkan\VulkanCommandUtils.h" />
     <ClInclude Include="src\Vulkan\VulkanContext.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
+    <ClInclude Include="src\Vulkan\VulkanDescriptorBuffer.h" />
     <ClInclude Include="src\Vulkan\VulkanGraphicsPipeline.h" />
     <ClInclude Include="src\Vulkan\VulkanRenderer.h" />
+    <ClInclude Include="src\Vulkan\VulkanRendererUtils.h" />
     <ClInclude Include="src\Vulkan\VulkanSwapchain.h" />
     <ClInclude Include="src\Vulkan\VulkanImage.h" />
     <ClInclude Include="src\Window.h" />

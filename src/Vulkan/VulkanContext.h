@@ -37,7 +37,7 @@ const std::vector<const char*> validationLayers = {
 
 class VulkanContext {
 public:
-    VkInstance vulkanInstance;
+    VkInstance instance;
     VkSurfaceKHR surface;
     VkPhysicalDevice physicalDevice;
     VkDevice logicalDevice;
@@ -48,12 +48,20 @@ public:
     VulkanCommon::QueueFamilyIndices queueFamilyIndices;
     GLFWwindow* window;
 
+    //Contain properties infos for different types of descriptors.
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT* descriptorBufferProperties;
+
+    PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR = VK_NULL_HANDLE;
+    PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT = VK_NULL_HANDLE;
+    PFN_vkGetDescriptorEXT vkGetDescriptorEXT = VK_NULL_HANDLE;
+    PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR = VK_NULL_HANDLE;
+
     VulkanContext();
     VulkanContext(GLFWwindow* window);
     void cleanup();
 
 private:
-    void createVulkanInstance();
+    void createInstance();
 	
     bool checkValidationLayerSupport();
 
@@ -62,7 +70,7 @@ private:
     VulkanCommon::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice pDevice);
     void pickPhysicalDevice();
     bool isDeviceSuitable(VkPhysicalDevice pDevice);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice pDevice); 
+    bool checkDeviceExtensionSupport(VkPhysicalDevice pDevice);
 	
     void createLogicalDevice();
 };

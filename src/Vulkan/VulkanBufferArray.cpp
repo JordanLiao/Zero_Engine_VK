@@ -5,11 +5,11 @@ VulkanBufferArray::VulkanBufferArray() {}
 
 VulkanBufferArray::VulkanBufferArray(uint32_t count, VkDeviceSize size, VkBufferUsageFlags usage,
                                      VkMemoryPropertyFlags properties,
-                                     VkDevice& logicalDevice, VkPhysicalDevice& physicalDevice) {
+                                     VulkanContext* context) {
     buffers.reserve(count);
     vkBuffers.reserve(count);
     for (uint32_t i = 0; i < count; i++) {
-        VulkanBuffer buffer(VulkanBuffer(size, usage, properties, logicalDevice, physicalDevice));
+        VulkanBuffer buffer(VulkanBuffer(size, usage, properties, context));
         buffers.push_back(buffer);
         vkBuffers.push_back(buffer.vkBuffer);
     }

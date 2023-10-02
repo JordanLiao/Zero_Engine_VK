@@ -8,8 +8,8 @@
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(){}
 
 VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
-                                               VkDevice& logicalDevice, VkExtent2D& extent, VkFormat& colorFormat, VkFormat& depthFormat, 
-                                               std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
+                                               VkExtent2D& extent, VkFormat& colorFormat, VkFormat& depthFormat, 
+                                               std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VkDevice logicalDevice) {
     this->logicalDevice = logicalDevice;
     auto vertShaderCode = readFile(vert);
     auto fragShaderCode = readFile(frag);

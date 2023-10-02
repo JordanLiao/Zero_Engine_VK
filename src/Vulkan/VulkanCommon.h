@@ -20,9 +20,6 @@ public:
         }
     };
 
-    static PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR;;
-    static void init(const VkDevice& logicalDevice, const VkInstance& instance);
-
 };
 
 #endif
