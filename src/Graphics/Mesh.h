@@ -8,8 +8,10 @@
 struct Mesh {
 	std::string meshName;
 	Material* material;
+
 	//offset in terms of indices(not vertices) into vao to begin drawing this mesh
 	uint32_t indexOffset;
+
 	/*size is number of vertices referenced by this mesh's indices; NOTE that this is not the num of vertices
 	in this mesh because identical vertices are joined; its value is 3 * num triangles*/
 	uint32_t size; 
@@ -23,7 +25,6 @@ struct Mesh {
 		meshSize: number of vertices referenced by this mesh's indices, 3 * num triangles
 	*/
 	Mesh(std::string& name, Material* mtl, int indexOff, int meshSize);
-	~Mesh();
 };
 
 #endif

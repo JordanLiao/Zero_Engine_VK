@@ -15,8 +15,8 @@ VulkanBufferArray::VulkanBufferArray(uint32_t count, VkDeviceSize size, VkBuffer
     }
 }
 
-void VulkanBufferArray::cleanup() {
+void VulkanBufferArray::cleanUp() {
     for (VulkanBuffer buffer : buffers) {
-	    buffer.cleanup();
+	    buffer.cleanUp();
     }
 }

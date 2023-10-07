@@ -22,8 +22,11 @@ VulkanRenderer::VulkanRenderer(VulkanContext* context) {
     //createDescriptorPool();
     VulkanRendererUtils::createDescriptorSetLayouts(descriptorSetLayoutInfos, descriptorSetLayouts, 
                                                     descriptorSetLayoutSizes, context);
-    createUniformBuffers();
+    descAllocator = VulkanDescriptorAllocator(DESCRIPTOR_ALLOCATOR_BUFFER_SIZE, VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT,
+                                              context);
+
     createDepthResources();
+    createUniformBuffers();
     createDescriptorSets();
     createPipelines();
     createSyncObjects();
@@ -124,23 +127,19 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
     /****************************/
 
-    uint32_t globalIndex = DescriptorSetLayoutIndex::global;
-    uint32_t perFrameIndex = DescriptorSetLayoutIndex::perFrame;
-    VkDescriptorBufferBindingInfoEXT bindingInfo[2]{};
-    bindingInfo[globalIndex].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    bindingInfo[globalIndex].address = globalDescriptorSetBuffer.deviceAddress;
-    bindingInfo[globalIndex].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
-    bindingInfo[perFrameIndex].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    bindingInfo[perFrameIndex].address = perFrameDescriptorSetBuffers.deviceAddress;
-    bindingInfo[perFrameIndex].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
+    uint32_t allocatorBufferIndex = 0;
+    VkDescriptorBufferBindingInfoEXT bindingInfo{};
+    bindingInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    bindingInfo.address = descAllocator.deviceAddress;
+    bindingInfo.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
 
-    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
+    //vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
+    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 1, &bindingInfo);
 
-    VkDeviceSize bufferOffset = 0;
-    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                                       pipeline.pipelineLayout, 0, 1, &globalIndex, &bufferOffset);
     vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                       pipeline.pipelineLayout, 1, 1, &perFrameIndex, &bufferOffset);
+        pipeline.pipelineLayout, 0, 1, &allocatorBufferIndex, &globalDescOffset);
+    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline.pipelineLayout, 1, 1, &allocatorBufferIndex, &perFrameDescOffsets[currentFrame]);
 }
 
 void VulkanRenderer::draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* vertexBuffers) {
@@ -200,6 +199,60 @@ void VulkanRenderer::submitDrawCalls() {
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void VulkanRenderer::createDepthResources() {
+    depthFormat = VulkanImageUtils::findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+                                                          VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL,
+                                                       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, context->physicalDevice);
+    VulkanImageUtils::createImage2D(swapchain.extent.width, swapchain.extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                depthImage, context);
+}
+
+void VulkanRenderer::createUniformBuffers() {
+    globalUBO.resize(descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].descriptorCount);
+    for (uint32_t i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].descriptorCount; i++) {
+        globalUBO[i] = VulkanBuffer(sizeof(GlobalUniformBufferObject),
+                                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                    context);
+        globalUBO[i].map();
+    }
+
+    perFrameUBOs.reserve(MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        perFrameUBOs.push_back(VulkanBuffer(sizeof(UniformBufferObject),
+                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                context));
+        perFrameUBOs.back().map();
+    }
+}
+
+void VulkanRenderer::createDescriptorSets() {
+    std::vector<std::vector<std::vector<VulkanBuffer*>>> globalUBOBufferPtrs(1, std::vector<std::vector<VulkanBuffer*>>(1));
+    globalUBOBufferPtrs[0][0].reserve(globalUBO.size());
+    for (VulkanBuffer& gubo : globalUBO) {
+        globalUBOBufferPtrs[0][0].push_back(&gubo);
+    }
+
+    descAllocator.getDescriptor(globalDescOffset, globalUBOBufferPtrs[0], descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global],
+                                descriptorSetLayouts[DescriptorSetLayoutIndex::global]);
+
+    perFrameDescOffsets.resize(MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        std::vector<std::vector<VulkanBuffer*>> resourcePtr = { {&(perFrameUBOs[i])} };
+        descAllocator.getDescriptor(perFrameDescOffsets[i], resourcePtr, 
+                                    descriptorSetLayoutInfos[DescriptorSetLayoutIndex::perFrame],
+                                    descriptorSetLayouts[DescriptorSetLayoutIndex::perFrame]);
+    }
+}
+
+void VulkanRenderer::createPipelines() {
+    pipeline = VulkanGraphicsPipeline("./src/shaders/vert.spv", "./src/shaders/frag.spv", 
+                                      VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, swapchain.extent, swapchain.format, 
+                                      depthFormat, descriptorSetLayouts, context->logicalDevice);
+}
+
 void VulkanRenderer::createSyncObjects() {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -236,148 +289,12 @@ void VulkanRenderer::createCommandBuffers() {
     }
 }
 
-void VulkanRenderer::createUniformBuffers() {
-    globalUBO.resize(descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].numDescriptor);
-    for (int i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].numDescriptor; i++) {
-        globalUBO[i] = VulkanBuffer(sizeof(GlobalUniformBufferObject),
-                                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                    context);
-        globalUBO[i].map();
-    }
-
-    perFrameUBOs.reserve(MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        perFrameUBOs.push_back(VulkanBuffer(sizeof(UniformBufferObject),
-                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                context));
-        perFrameUBOs.back().map();
-    }
-}
-
-void VulkanRenderer::createDepthResources() {
-    depthFormat = VulkanImageUtils::findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, 
-                                                                  VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL,
-                                                           VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, context->physicalDevice);
-    VulkanImageUtils::createImage2D(swapchain.extent.width, swapchain.extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-                                        depthImage, context);
-}
-
-void VulkanRenderer::createDescriptorSets() {
-    std::vector<std::vector<std::vector<VulkanBuffer*>>> globalUBOBufferPtrs(1, std::vector<std::vector<VulkanBuffer*>>(1));
-    globalUBOBufferPtrs[0][0].reserve(globalUBO.size());
-    for (VulkanBuffer& gubo : globalUBO) {
-        globalUBOBufferPtrs[0][0].push_back(&gubo);
-    }
-
-    VulkanRendererUtils::createDescriptorSet(globalDescriptorSetBuffer, descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global],
-        globalUBOBufferPtrs, descriptorSetLayoutSizes[DescriptorSetLayoutIndex::global], 
-        VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
-
-    
-    std::vector<std::vector<std::vector<VulkanBuffer*>>> perFrameUBOBuffersPtrs(MAX_FRAMES_IN_FLIGHT, 
-                                                         std::vector<std::vector<VulkanBuffer*>>(1, std::vector<VulkanBuffer*>(1)));
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        perFrameUBOBuffersPtrs[i][0][0] = &(perFrameUBOs[i]);
-    }
-
-    VulkanRendererUtils::createDescriptorSet(perFrameDescriptorSetBuffers, descriptorSetLayoutInfos[DescriptorSetLayoutIndex::perFrame],
-                                perFrameUBOBuffersPtrs, descriptorSetLayoutSizes[DescriptorSetLayoutIndex::perFrame],
-                                VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
-
-
-    /*globalDescriptorSetBuffer = VulkanBuffer(descriptorSetLayoutSizes[DescriptorSetLayoutIndex::global],
-                                    VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                    context);
-    globalDescriptorSetBuffer.map();
-    //globalDescriptorSetBufferDeviceAddr = VulkanBufferUtils::getBufferDeviceAddress(globalDescriptorSetBuffer.vkBuffer, context);
-    
-    perFrameDescriptorSetBuffers = VulkanBuffer(MAX_FRAMES_IN_FLIGHT * descriptorSetLayoutSizes[DescriptorSetLayoutIndex::perFrame],
-                                VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                context);
-    perFrameDescriptorSetBuffers.map();
-    //perFrameDescriptorSetBuffersDeviceAddr = VulkanBufferUtils::getBufferDeviceAddress(perFrameDescriptorSetBuffers.vkBuffer, context);
-    
-    //need buffer alignment sizes for each descriptor
-    VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProperties{};
-    descriptorBufferProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
-    VkPhysicalDeviceProperties2 deviceProperties{};
-    deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-    deviceProperties.pNext = &descriptorBufferProperties;
-    context->vkGetPhysicalDeviceProperties2KHR(context->physicalDevice, &deviceProperties);
-    
-    uniformDescriptorOffset = VulkanBufferUtils::getAlignedBufferSize(descriptorBufferProperties.uniformBufferDescriptorSize,
-                                                                      descriptorBufferProperties.descriptorBufferOffsetAlignment);
-
-    VkDescriptorAddressInfoEXT globalAddressInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
-    globalAddressInfo.range = sizeof(GlobalUniformBufferObject);
-    globalAddressInfo.format = VK_FORMAT_UNDEFINED;
-
-    //fill the descriptor set buffers with actual descriptor sets
-    VkDescriptorGetInfoEXT globalGetInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
-    globalGetInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    globalGetInfo.data.pUniformBuffer = &globalAddressInfo;
-
-    //actually must get the descriptor for 
-    for (int i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].numDescriptor; i++) {
-        globalAddressInfo.address = VulkanBufferUtils::getBufferDeviceAddress(globalUBO[i].vkBuffer, context);
-        
-        context->vkGetDescriptorEXT(context->logicalDevice, &globalGetInfo, descriptorBufferProperties.uniformBufferDescriptorSize,
-                   (char*)globalDescriptorSetBuffer.data + i * descriptorBufferProperties.uniformBufferDescriptorSize);
-    }
-    
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorAddressInfoEXT perFrameAddressInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
-        perFrameAddressInfo.address = VulkanBufferUtils::getBufferDeviceAddress(perFrameUBOs[i].vkBuffer, context);
-        perFrameAddressInfo.range = perFrameUBOs[i].hostSize;
-        perFrameAddressInfo.format = VK_FORMAT_UNDEFINED;
-        
-        VkDescriptorGetInfoEXT perFrameGetInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
-        perFrameGetInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        perFrameGetInfo.data.pUniformBuffer = &perFrameAddressInfo;
-        //offset by the size of a one descriptor set.
-        context->vkGetDescriptorEXT(context->logicalDevice, &perFrameGetInfo, descriptorBufferProperties.uniformBufferDescriptorSize,
-                      (char*)perFrameDescriptorSetBuffers.data + i * descriptorSetLayoutSizes[DescriptorSetLayoutIndex::perFrame]);
-    }*/
-}
-
-void VulkanRenderer::createPipelines() {
-    pipeline = VulkanGraphicsPipeline("./src/shaders/vert.spv", "./src/shaders/frag.spv", 
-                                      VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, swapchain.extent, swapchain.format, 
-                                      depthFormat, descriptorSetLayouts, context->logicalDevice);
-}
-
-void VulkanRenderer::cleanup() {
+void VulkanRenderer::cleanUp() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(context->logicalDevice, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(context->logicalDevice, imageAvailableSemaphores[i], nullptr);
         vkDestroyFence(context->logicalDevice, inFlightFences[i], nullptr);
     }
-    commandPool.cleanup();
-	swapchain.cleanup();
+    commandPool.cleanUp();
+	swapchain.cleanUp();
 }
-
-/*void VulkanRenderer::createDescriptorPool() {
-    //create a size info struct for each type of descriptor, like uniform buffer, or image samplers...
-    std::vector<VkDescriptorPoolSize> poolSizes(descriptorTypes.size());
-    for (int i = 0; i < poolSizes.size(); i++) {
-        poolSizes[i].type = descriptorTypes[i];
-        poolSizes[i].descriptorCount = 100; //how many descriptor of this type
-    }
-
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT + 1);
-
-    if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor pool!");
-    }
-}*/

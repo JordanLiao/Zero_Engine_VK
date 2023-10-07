@@ -29,7 +29,7 @@ public:
     */
     static VulkanBufferArray createVertexBuffers(const VertexBuffer& vertexBuffers, VulkanCommandPool& commandPool, VulkanContext* context);
     
-    static uint32_t getAlignedBufferSize(size_t bufferSize, size_t alignment);
+    static uint32_t getAlignedBufferSize(size_t offset, size_t alignment);
 
     static VkDeviceAddress getBufferDeviceAddress(VkBuffer buffer, VulkanContext* context);
 };

@@ -45,7 +45,7 @@ VulkanBuffer VulkanBufferUtils::createVulkanDataBuffer(void* srcData, VkDeviceSi
 
     VulkanBuffer buffer(size, usageFlags, propertyFlags, context);
     copyBuffer(buffer, stagingBuffer, commandPool);
-    stagingBuffer.cleanup();
+    stagingBuffer.cleanUp();
 
     return buffer;
 }
@@ -87,12 +87,12 @@ VulkanBufferArray VulkanBufferUtils::createVertexBuffers(const VertexBuffer& ver
 }
 
 //based on Sascha Willems' method
-uint32_t VulkanBufferUtils::getAlignedBufferSize(size_t bufferSize, size_t alignment) {
-    size_t alignedSize = bufferSize;
+uint32_t VulkanBufferUtils::getAlignedBufferSize(size_t offset, size_t alignment) {
+    size_t alignedOffset = offset;
     if (alignment > 0) {
-        alignedSize = (alignedSize + alignment - 1) & ~(alignment - 1);
+        alignedOffset = (alignedOffset + alignment - 1) & ~(alignment - 1);
     }
-    return (uint32_t)alignedSize;
+    return (uint32_t)alignedOffset;
 }
 
 VkDeviceAddress VulkanBufferUtils::getBufferDeviceAddress(VkBuffer buffer, VulkanContext* context) {

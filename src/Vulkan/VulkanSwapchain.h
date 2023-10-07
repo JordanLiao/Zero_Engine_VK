@@ -26,7 +26,7 @@ public:
 
     VulkanSwapchain();
     VulkanSwapchain(VulkanContext* vulkanContext);
-    void cleanup();
+    void cleanUp();
 
 private:
     VulkanContext* context;

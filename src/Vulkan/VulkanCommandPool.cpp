@@ -17,7 +17,7 @@ VulkanCommandPool::VulkanCommandPool(VkCommandPoolCreateFlags flags, uint32_t qu
         throw std::runtime_error("failed to create command pool!");
 }
 
-void VulkanCommandPool::cleanup() {
+void VulkanCommandPool::cleanUp() {
     vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
 }
 

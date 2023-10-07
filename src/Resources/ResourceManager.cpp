@@ -58,7 +58,7 @@ void ResourceManager::init(VulkanContext* context) {
 }
 
 void ResourceManager::cleanup() {
-    vulkanCommandPool.cleanup();
+    vulkanCommandPool.cleanUp();
     initialized = false;
 }
 
@@ -104,36 +104,6 @@ Material * ResourceManager::loadMaterial(const aiMaterial * mtl) {
 
 	return mat;
 }
-
-/*uint32_t ResourceManager::loadTexture(std::string & fPath) {
-	std::string textureName = getFileNameFromPath(fPath);
-	//if texture is already loaded
-	if (textureMap.find(textureName) != textureMap.end())
-		return textureMap[textureName];
-
-	int ftw, fth, channels;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char* data = stbi_load(fPath.c_str(), &ftw, &fth, &channels, STBI_rgb_alpha);
-	if (data == NULL) {
-		std::cout << "cannot load texture at " << fPath << std::endl;
-		return 0;
-	}
-	uint32_t textId;
-	glcheck(glGenTextures(1, &textId));
-	glcheck(glBindTexture(GL_TEXTURE_2D, textId));
-	glcheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-	glcheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-	glcheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-	glcheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-	glcheck(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ftw, fth, 0, GL_RGBA, GL_UNSIGNED_BYTE, data));
-	glcheck(glGenerateMipmap(GL_TEXTURE_2D));
-	stbi_image_free(data);
-
-	//store texture id in textureMap for possible later use
-	textureMap[textureName] = textId;
-
-	return textId;
-}*/
 
 Object* ResourceManager::loadObject(const char* fPath) {
     if (!initialized) {

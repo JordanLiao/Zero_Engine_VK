@@ -16,7 +16,7 @@ public:
     VulkanBufferArray(uint32_t count, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                       VulkanContext* context);
 
-    void cleanup();
+    void cleanUp();
 };
 
 #endif

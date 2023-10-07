@@ -11,7 +11,7 @@
 #include "resources/GraphicsBuffers.h"
 #include "Graphics/Object.h"
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/gtx/transform.hpp"
 
 #include "../Resources/ResourceManager.h"

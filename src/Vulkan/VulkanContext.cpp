@@ -22,19 +22,21 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     createLogicalDevice();
     
     vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
-                                        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
+                                            vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
     vkGetDescriptorEXT = reinterpret_cast<PFN_vkGetDescriptorEXT>(
-                                        vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorEXT"));
+                                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorEXT"));
     vkGetDescriptorSetLayoutSizeEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutSizeEXT>(
-                                      vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutSizeEXT"));
-    vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(vkGetDeviceProcAddr(logicalDevice,
-                                  "vkGetBufferDeviceAddressKHR"));
+                                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutSizeEXT"));
+    vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(
+                                            vkGetDeviceProcAddr(logicalDevice, "vkGetBufferDeviceAddressKHR"));
+    vkGetDescriptorSetLayoutBindingOffsetEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutBindingOffsetEXT>(
+                                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutBindingOffsetEXT"));
 
-    descriptorBufferProperties = new VkPhysicalDeviceDescriptorBufferPropertiesEXT{};
-    descriptorBufferProperties->sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
+    descBufferProps = new VkPhysicalDeviceDescriptorBufferPropertiesEXT{};
+    descBufferProps->sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
     VkPhysicalDeviceProperties2 deviceProperties{};
     deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-    deviceProperties.pNext = descriptorBufferProperties;
+    deviceProperties.pNext = descBufferProps;
     vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
 }
 
@@ -252,7 +254,7 @@ void VulkanContext::createLogicalDevice() {
     vkGetDeviceQueue(logicalDevice, queueFamilyIndices.transferFamily.value(), 0, &transferQueue);
 }
 
-void VulkanContext::cleanup() {
+void VulkanContext::cleanUp() {
     vkDestroyDevice(logicalDevice, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);

@@ -132,7 +132,7 @@ SwapchainSupportDetails VulkanSwapchain::querySwapchainSupport(VkSurfaceKHR surf
     return swapchainSupport;
 }
 
-void VulkanSwapchain::cleanup() {
+void VulkanSwapchain::cleanUp() {
     for (size_t i = 0; i < imageViews.size(); i++)
         vkDestroyImageView(context->logicalDevice, imageViews[i], nullptr);
 

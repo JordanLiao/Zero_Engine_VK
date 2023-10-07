@@ -199,7 +199,7 @@ std::vector<char> VulkanGraphicsPipeline::readFile(const std::string& filename) 
     return buffer; 
 }
 
-void VulkanGraphicsPipeline::cleanup() {
+void VulkanGraphicsPipeline::cleanUp() {
     if(graphicsPipeline != VK_NULL_HANDLE)
         vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
     if(pipelineLayout != VK_NULL_HANDLE)

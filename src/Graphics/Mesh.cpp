@@ -13,6 +13,3 @@ Mesh::Mesh(std::string& name, Material* mtl, int indOff, int meshSize) {
     size = meshSize;
 }
 
-Mesh::~Mesh() {
-    delete material;
-}

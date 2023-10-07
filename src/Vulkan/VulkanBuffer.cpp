@@ -66,7 +66,7 @@ void VulkanBuffer::transferData(const void* src, size_t size) {
     memcpy(data,src, size);
 }
 
-void VulkanBuffer::cleanup() {
+void VulkanBuffer::cleanUp() {
     vkDestroyBuffer(context->logicalDevice, vkBuffer, nullptr);
     vkFreeMemory(context->logicalDevice, bufferMemory, nullptr);
 }

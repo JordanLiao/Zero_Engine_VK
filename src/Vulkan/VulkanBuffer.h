@@ -45,10 +45,13 @@ public:
 
     VulkanBuffer();
     VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context);
+
+    //Maps device memory to the data pointer handle
     VkResult map();
+    //Unmaps the data pointer handle
     void unmap();
     void transferData(const void* src, size_t size);
-    void cleanup();
+    void cleanUp();
  
 private:
     VulkanContext* context;

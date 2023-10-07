@@ -8,6 +8,10 @@
 struct VulkanDescriptorBuffer {
     VulkanBuffer buffer;
     VkDeviceAddress deviceAddress;
+    
+    void cleanUp() {
+        buffer.cleanUp();
+    }
 };
 
 #endif

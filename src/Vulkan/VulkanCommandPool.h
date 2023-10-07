@@ -13,7 +13,7 @@ public:
     VulkanCommandPool(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex, const VkDevice& logicalDevice);
     void createCommandBuffers(std::vector<VkCommandBuffer>& commandBuffers, VkCommandBufferLevel level);
     void freeCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t count);
-    void cleanup();
+    void cleanUp();
     
 private:
     VkDevice logicalDevice;

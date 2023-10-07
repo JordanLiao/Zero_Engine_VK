@@ -15,7 +15,7 @@ public:
     VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
                            VkExtent2D& extent, VkFormat& format, VkFormat& depthFormat,
                            std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VkDevice logicalDevice);
-    void cleanup();
+    void cleanUp();
 
 private:
     VkDevice logicalDevice;

@@ -7,6 +7,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanBufferArray.h"
 #include "VulkanRendererUtils.h"
+#include "VulkanDescriptorAllocator.h"
 
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/glm.hpp"
@@ -18,12 +19,15 @@ class VulkanContext;
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
-const std::vector<std::vector<DescriptorSetBindingInfo>> descriptorSetLayoutInfos {
+//size of the descriptor allocator buffer to hold all descriptor sets
+#define DESCRIPTOR_ALLOCATOR_BUFFER_SIZE 10000
+
+const std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutInfos  = {
     { //global descriptor set
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4, VK_SHADER_STAGE_FRAGMENT_BIT}
+        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4, VK_SHADER_STAGE_FRAGMENT_BIT, VK_NULL_HANDLE}
     },
     { //per frame descriptor set, containing projection, view etc.
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
+        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, VK_NULL_HANDLE}
     }
 };
 
@@ -34,13 +38,12 @@ public:
 
     std::vector<VulkanBuffer> globalUBO;
     /*
-	    Resets the currentFrame's commandBuffer, and make ready the renderer to record
-	    draw commands.
+	    Resets commandBuffers[currentFrame], and make ready the renderer to record draw commands.
     */
     void beginDrawCalls(const glm::mat4& projView);
 
     /* 
-	    records a single draw command into the currentFrame's commandBuffer
+	    records a single draw command into commandBuffers[currentFrame].
     */
     void draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* vertexBuffers);
 	
@@ -49,7 +52,7 @@ public:
     */
     void submitDrawCalls();
 
-    void cleanup();
+    void cleanUp();
 
 private:
     VulkanContext* context;
@@ -61,14 +64,11 @@ private:
     std::vector<VkCommandBuffer> commandBuffers; //one commandBuffer per frame in flight
     void createCommandBuffers();
 
-    int currentFrame = 0;
+    uint32_t currentFrame = 0;
     std::vector<VkSemaphore> imageAvailableSemaphores; //whether an image is available to render to.
     std::vector<VkSemaphore> renderFinishedSemaphores; //whether an image has finished rendering.
     std::vector<VkFence> inFlightFences; //whether cmds for the currentFrame have finished.
     void createSyncObjects();
-
-    //VkDescriptorPool descriptorPool;
-    //void createDescriptorPool();
     
     std::vector<VulkanBuffer> perFrameUBOs;
     void createUniformBuffers();
@@ -84,16 +84,19 @@ private:
     PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
     PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
 
-    uint32_t uniformDescriptorOffset; //size of a uniform descriptor, used for indexing offset
     VulkanDescriptorBuffer globalDescriptorSetBuffer;
     VulkanDescriptorBuffer perFrameDescriptorSetBuffers; //multiple perFrame descriptor sets buffers packed into one.
-    //VkDeviceAddress globalDescriptorSetBufferDeviceAddr;
-    //VkDeviceAddress perFrameDescriptorSetBuffersDeviceAddr;
+    VulkanDescriptorAllocator descAllocator;
+    std::vector<VkDeviceSize> perFrameDescOffsets;
+    VkDeviceSize globalDescOffset;
     void createDescriptorSets();
 
     //initial testing pipeline, there could be many different pipelines
     VulkanGraphicsPipeline pipeline;
     void createPipelines();
+
+    //VkDescriptorPool descriptorPool;
+    //void createDescriptorPool();
 };
 
 #endif

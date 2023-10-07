@@ -48,17 +48,18 @@ public:
     VulkanCommon::QueueFamilyIndices queueFamilyIndices;
     GLFWwindow* window;
 
-    //Contain properties infos for different types of descriptors.
-    VkPhysicalDeviceDescriptorBufferPropertiesEXT* descriptorBufferProperties;
+    //properties for different types of descriptors.
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT* descBufferProps;
 
     PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR = VK_NULL_HANDLE;
     PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT = VK_NULL_HANDLE;
     PFN_vkGetDescriptorEXT vkGetDescriptorEXT = VK_NULL_HANDLE;
     PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR = VK_NULL_HANDLE;
+    PFN_vkGetDescriptorSetLayoutBindingOffsetEXT vkGetDescriptorSetLayoutBindingOffsetEXT = VK_NULL_HANDLE;
 
     VulkanContext();
     VulkanContext(GLFWwindow* window);
-    void cleanup();
+    void cleanUp();
 
 private:
     void createInstance();
