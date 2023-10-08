@@ -16,11 +16,18 @@
 
 #include "../Resources/ResourceManager.h"
 
+static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    VulkanContext* context = (VulkanContext*)glfwGetWindowUserPointer(window);
+    context->resized = true;
+}
+
 int main(int argc, char* argv[]) {
 
     uint32_t width = 900, height = 600;
 	Window window(width, height, "Zero Engine VK");
 	VulkanContext vulkanContext(window.window);
+    glfwSetWindowUserPointer(window.window, &vulkanContext);
+    glfwSetFramebufferSizeCallback(window.window, framebufferResizeCallback);
     ResourceManager::init(&vulkanContext);
 	VulkanRenderer renderer(&vulkanContext);
 	VulkanCommandPool transferCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, 

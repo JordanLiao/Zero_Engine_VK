@@ -46,10 +46,14 @@ public:
     VkQueue presentQueue;
     VkQueue transferQueue;
     VulkanCommon::QueueFamilyIndices queueFamilyIndices;
+
+    bool resized; //whether window has resized or not
     GLFWwindow* window;
 
     //properties for different types of descriptors.
     VkPhysicalDeviceDescriptorBufferPropertiesEXT* descBufferProps;
+    //properties of the physical device being used
+    VkPhysicalDeviceProperties *physicalDeviceProps;
 
     PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR = VK_NULL_HANDLE;
     PFN_vkGetDescriptorSetLayoutSizeEXT vkGetDescriptorSetLayoutSizeEXT = VK_NULL_HANDLE;

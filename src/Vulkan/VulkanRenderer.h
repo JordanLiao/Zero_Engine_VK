@@ -37,13 +37,17 @@ public:
     VulkanRenderer(VulkanContext* context);
 
     std::vector<VulkanBuffer> globalUBO;
-    /*
-	    Resets commandBuffers[currentFrame], and make ready the renderer to record draw commands.
+    //VulkanBuffer globalUBO;
+    /**
+	*   Resets commandBuffers[currentFrame], and make ready the renderer to record draw commands.
+    *   @param projView The projection view matrix used for drawing frame of index currentFrame.
     */
     void beginDrawCalls(const glm::mat4& projView);
 
-    /* 
-	    records a single draw command into commandBuffers[currentFrame].
+    /**
+    * @param numIndices The number of indices to draw.
+    * @param indexBuffer VkBuffer handle to the indexBuffer.
+    * @param vertexBuffers A pointer to the Vkbuffer array.
     */
     void draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* vertexBuffers);
 	
@@ -59,6 +63,7 @@ private:
 
     uint32_t imageIndex = 0; //next available imageIndex in the swapchain
     VulkanSwapchain swapchain;
+    void recreateSwapchain();
 
     VulkanCommandPool commandPool;
     std::vector<VkCommandBuffer> commandBuffers; //one commandBuffer per frame in flight

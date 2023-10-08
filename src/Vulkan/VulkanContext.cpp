@@ -20,6 +20,8 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     //save queue family indices only after physicalDevice is set
     queueFamilyIndices = findQueueFamilies(physicalDevice); 
     createLogicalDevice();
+
+    resized = false;
     
     vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
                                             vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
@@ -38,6 +40,9 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
     deviceProperties.pNext = descBufferProps;
     vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
+
+    physicalDeviceProps = new VkPhysicalDeviceProperties{};
+    vkGetPhysicalDeviceProperties(physicalDevice, physicalDeviceProps);
 }
 
 void VulkanContext::createInstance() {

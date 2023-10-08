@@ -11,19 +11,17 @@ VulkanRenderer::VulkanRenderer(VulkanContext* context) {
     this->context = context;
 	swapchain = VulkanSwapchain(context);
     commandPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                                    context->queueFamilyIndices.graphicsFamily.value(),
-                                    context->logicalDevice);
+                                    context->queueFamilyIndices.graphicsFamily.value(), context->logicalDevice);
 
     vkCmdBindDescriptorBuffersEXT = reinterpret_cast<PFN_vkCmdBindDescriptorBuffersEXT>(
                             vkGetDeviceProcAddr(context->logicalDevice, "vkCmdBindDescriptorBuffersEXT"));
     vkCmdSetDescriptorBufferOffsetsEXT = reinterpret_cast<PFN_vkCmdSetDescriptorBufferOffsetsEXT>(
                             vkGetDeviceProcAddr(context->logicalDevice, "vkCmdSetDescriptorBufferOffsetsEXT"));
 
-    //createDescriptorPool();
     VulkanRendererUtils::createDescriptorSetLayouts(descriptorSetLayoutInfos, descriptorSetLayouts, 
                                                     descriptorSetLayoutSizes, context);
-    descAllocator = VulkanDescriptorAllocator(DESCRIPTOR_ALLOCATOR_BUFFER_SIZE, VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT,
-                                              context);
+    descAllocator = VulkanDescriptorAllocator(DESCRIPTOR_ALLOCATOR_BUFFER_SIZE, 
+                                              VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT, context);
 
     createDepthResources();
     createUniformBuffers();
@@ -47,10 +45,10 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     gubo[1].light = glm::vec3(0.5f, 0.5f, 0.f);
     gubo[2].light = glm::vec3(0.f, 0.5f, 0.5f);
     gubo[3].light = glm::vec3(0.f, 0.f, 1.f);
-    gubo[0].lightPosition = glm::vec3(-15.f, 5.f, 0.f);
-    gubo[1].lightPosition = glm::vec3(-3.33f, 10.f, 0.f);
-    gubo[2].lightPosition = glm::vec3(3.33f, 10.f, 0.f);
-    gubo[3].lightPosition = glm::vec3(10.f, 5.f, 0.f);
+    gubo[0].lightPosition = glm::vec3(-10.f, 10.f, 10.f);
+    gubo[1].lightPosition = glm::vec3(-10.f, -10.f, 10.f);
+    gubo[2].lightPosition = glm::vec3(10.f, 10.f, 10.f);
+    gubo[3].lightPosition = glm::vec3(10.f, -10.f, 10.f);
 
     int s = sizeof(GlobalUniformBufferObject);
     globalUBO[0].transferData(gubo, sizeof(GlobalUniformBufferObject));
@@ -63,7 +61,11 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     //be available immediately, so a semaphore is needed to synchronize vkcommands that depend on the image.
     VkResult result = vkAcquireNextImageKHR(context->logicalDevice, swapchain.swapchain, UINT64_MAX,
                                             imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreateSwapchain();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swap chain image!");
     } 
 
@@ -192,7 +194,10 @@ void VulkanRenderer::submitDrawCalls() {
     presentInfo.pResults = nullptr; // Optional
 
     VkResult result = vkQueuePresentKHR(context->presentQueue, &presentInfo);
-    if (result != VK_SUCCESS) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || context->resized) {
+        recreateSwapchain();
+    }
+    else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
@@ -209,12 +214,17 @@ void VulkanRenderer::createDepthResources() {
 }
 
 void VulkanRenderer::createUniformBuffers() {
+
+    /*VulkanBuffer(sizeof(GlobalUniformBufferObject),
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        context);*/
+
     globalUBO.resize(descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].descriptorCount);
     for (uint32_t i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].descriptorCount; i++) {
         globalUBO[i] = VulkanBuffer(sizeof(GlobalUniformBufferObject),
                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                    context);
+                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
         globalUBO[i].map();
     }
 
@@ -222,8 +232,7 @@ void VulkanRenderer::createUniformBuffers() {
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         perFrameUBOs.push_back(VulkanBuffer(sizeof(UniformBufferObject),
                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                context));
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context));
         perFrameUBOs.back().map();
     }
 }
@@ -269,10 +278,27 @@ void VulkanRenderer::createSyncObjects() {
         if (vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(context->logicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
-
             throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
     }
+}
+
+void VulkanRenderer::recreateSwapchain() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(context->window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(context->window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(context->logicalDevice);
+    swapchain.cleanUp();
+    swapchain = VulkanSwapchain(context);
+
+    vkDestroyImageView(context->logicalDevice, depthImage.vkImageView, nullptr);
+    createDepthResources();
+
+    context->resized = false;
 }
 
 void VulkanRenderer::createCommandBuffers() {
