@@ -8,7 +8,7 @@ layout(location = 1) out vec3 outNormal;
 
 layout(set=1,binding = 0) uniform UniformBufferObject {
     mat4 projView;
-	vec3 viewDir;
+    vec3 viewDir;
 } ubo;
 
 void main() {

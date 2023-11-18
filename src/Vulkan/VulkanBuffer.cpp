@@ -6,67 +6,59 @@
 #include <stdexcept>
 #include <iostream>
 
-VulkanBuffer::VulkanBuffer() {
-    vkBuffer = VK_NULL_HANDLE;
-    bufferMemory = VK_NULL_HANDLE;
-}
+int VulkanBuffer::bufferCount = 0;
+
+VulkanBuffer::VulkanBuffer() : mapped(false), vkBuffer(VK_NULL_HANDLE), context(nullptr), data(nullptr),
+                               hostSize(0), allocation(nullptr){}
 
 VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                            VulkanContext* context){
+    mapped = false;
     this->hostSize = size;
     data = nullptr;
     this->context = context;
 
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufferInfo.size = size;
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(context->logicalDevice, &bufferInfo, nullptr, &vkBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+    allocInfo.requiredFlags = properties;
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(context->logicalDevice, vkBuffer, &memRequirements);
-
-    deviceSize = memRequirements.size;
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties, context);
-
-    if (usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
-        VkMemoryAllocateFlagsInfo flagsInfo{};
-        flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
-        flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
-        allocInfo.pNext = &flagsInfo;
-    }
-
-    if (vkAllocateMemory(context->logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-
-    if (vkBindBufferMemory(context->logicalDevice, vkBuffer, bufferMemory, 0) != VK_SUCCESS) {
-        throw std::runtime_error("failed to bind VkBuffer to VkMemory!");
-    }
+    vmaCreateBuffer(context->vmAlloc, &bufferInfo, &allocInfo, &vkBuffer, &allocation, nullptr);
+    bufferCount++;
 }
 
 VkResult VulkanBuffer::map() {
-    VkResult result = vkMapMemory(context->logicalDevice, bufferMemory, 0, hostSize, 0, &data);
-    return result;
+    if (mapped)
+        return VK_SUCCESS;
+
+    VkResult res = vmaMapMemory(context->vmAlloc, allocation, &data);
+    if (res == VK_SUCCESS)
+        mapped = true;
+
+    return res;
 }
 
 void  VulkanBuffer::unmap(){
-    vkUnmapMemory(context->logicalDevice, bufferMemory);
+    if (!mapped)
+        return;
+
+    vmaUnmapMemory(context->vmAlloc, allocation);
+    mapped = false;
 }
 
 void VulkanBuffer::transferData(const void* src, size_t size) {
+    if (size > hostSize)
+        throw std::runtime_error("Cannot transfer more data than that is mapped on device!");
     memcpy(data,src, size);
 }
 
 void VulkanBuffer::cleanUp() {
-    vkDestroyBuffer(context->logicalDevice, vkBuffer, nullptr);
-    vkFreeMemory(context->logicalDevice, bufferMemory, nullptr);
+    unmap();
+    vmaDestroyBuffer(context->vmAlloc, vkBuffer, allocation);
+    bufferCount--;
 }

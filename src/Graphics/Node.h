@@ -15,9 +15,6 @@ public:
 	std::vector<Node*> children;
 
 	Node();
-	/*
-		build a Node Tree based on the given aiNode structure
-	*/
 	Node(aiNode* node);
 	~Node();
 

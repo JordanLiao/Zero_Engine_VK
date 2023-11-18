@@ -1,12 +1,38 @@
 #include "VulkanImage.h"
 #include "VulkanCommandUtils.h"
+#include "VulkanBuffer.h"
 #include "VulkanBufferUtils.h"
 #include "VulkanContext.h"
+#include "../Resources/ResourceManager.h"
+#include "../Resources/Formats.h"
 
 #include <stdexcept>
 
-void VulkanImageUtils::createImage2D(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-                                VkMemoryPropertyFlags properties, VulkanImage& image, VulkanContext* context) {
+void VulkanImageUtils::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, 
+                                         VkCommandBuffer commandBuffer) {
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = { 0, 0, 0 };
+    region.imageExtent = {width, height, 1};
+
+    vkCmdCopyBufferToImage(
+        commandBuffer,
+        buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region
+    );
+}
+
+void VulkanImageUtils::createImage2D(VulkanImage& image, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+                                     VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context) {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -40,10 +66,17 @@ void VulkanImageUtils::createImage2D(uint32_t width, uint32_t height, VkFormat f
 
     vkBindImageMemory(context->logicalDevice, image.vkImage, image.vkDeviceMemory, 0);
 
-    image.vkImageView = createImageView(image.vkImage, format, VK_IMAGE_ASPECT_DEPTH_BIT, context->logicalDevice);
+    VkImageAspectFlags aspectFlags;
+    if (format >= VK_FORMAT_D16_UNORM && format <= VK_FORMAT_D32_SFLOAT_S8_UINT)
+        aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    else
+        aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    image.vkImageView = createImageView(image.vkImage, format, aspectFlags, context->logicalDevice);
 }
 
-VkImageView VulkanImageUtils::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice logicalDevice) {
+VkImageView VulkanImageUtils::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, 
+                                              VkDevice logicalDevice) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -152,4 +185,36 @@ VkFormat VulkanImageUtils::findSupportedFormat(const std::vector<VkFormat>& cand
     }
 
     throw std::runtime_error("failed to find supported format!");
+}
+
+VkSampler VulkanImageUtils::createSampler(VkFilter filter, VkSamplerAddressMode addressMode, VulkanContext* context) {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = filter;
+    samplerInfo.minFilter = filter;
+
+    samplerInfo.addressModeU = addressMode;
+    samplerInfo.addressModeV = addressMode;
+    samplerInfo.addressModeW = addressMode;
+
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = context->physicalDeviceProps->limits.maxSamplerAnisotropy;
+
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    VkSampler sampler;
+    if (vkCreateSampler(context->logicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create texture sampler!");
+    }
+    
+    return sampler;
 }

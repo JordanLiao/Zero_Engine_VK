@@ -21,7 +21,7 @@ void VulkanCommandPool::cleanUp() {
     vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
 }
 
-void VulkanCommandPool::createCommandBuffers(std::vector<VkCommandBuffer>& commandBuffers, VkCommandBufferLevel level) {
+void VulkanCommandPool::createCommandBuffers(std::vector<VkCommandBuffer>& commandBuffers, VkCommandBufferLevel level) const{
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
@@ -32,6 +32,6 @@ void VulkanCommandPool::createCommandBuffers(std::vector<VkCommandBuffer>& comma
         throw std::runtime_error("failed to allocate command buffers!");
 }
 
-void VulkanCommandPool::freeCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t count) {
+void VulkanCommandPool::freeCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t count) const {
     vkFreeCommandBuffers(logicalDevice, commandPool, count, commandBuffers);
 }

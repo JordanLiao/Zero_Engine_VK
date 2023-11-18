@@ -6,8 +6,8 @@
 class VulkanCommandPool;
 
 namespace VulkanCommandUtils {
-    VkCommandBuffer beginSingleTimeCommands(VulkanCommandPool& commandPool);
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer, VulkanCommandPool& commandPool);
+    VkCommandBuffer beginSingleTimeCommands(const VulkanCommandPool& commandPool);
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer, const VulkanCommandPool& commandPool);
 }
 
 #endif

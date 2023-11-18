@@ -3,7 +3,7 @@
 
 #include <vector>
 
-VkCommandBuffer VulkanCommandUtils::beginSingleTimeCommands(VulkanCommandPool& commandPool) {
+VkCommandBuffer VulkanCommandUtils::beginSingleTimeCommands(const VulkanCommandPool& commandPool) {
     std::vector<VkCommandBuffer> singleCommandBuffer(1);
     commandPool.createCommandBuffers(singleCommandBuffer, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
@@ -16,7 +16,7 @@ VkCommandBuffer VulkanCommandUtils::beginSingleTimeCommands(VulkanCommandPool& c
     return singleCommandBuffer[0];
 }
 
-void VulkanCommandUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, VulkanCommandPool& commandPool) {
+void VulkanCommandUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, const VulkanCommandPool& commandPool) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};

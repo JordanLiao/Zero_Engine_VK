@@ -2,6 +2,8 @@
 #define _VULKANBUFFER_
 
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
+
 #include <vector>
 
 namespace VulkanVertexBufferInfo {
@@ -11,11 +13,6 @@ namespace VulkanVertexBufferInfo {
             3 * sizeof(float),          // stride
             VK_VERTEX_INPUT_RATE_VERTEX // inputRate, not per instance
         },
-        {
-            1,                          // bindin
-            3 * sizeof(float),          // stride
-            VK_VERTEX_INPUT_RATE_VERTEX // inputRate
-        }
     };
 
     const std::vector<VkVertexInputAttributeDescription> vertexAttributes = {
@@ -41,21 +38,24 @@ public:
     VkBuffer vkBuffer;
     void* data;
     VkDeviceSize hostSize;
-    VkDeviceSize deviceSize;
 
     VulkanBuffer();
     VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context);
 
-    //Maps device memory to the data pointer handle
+    //Maps the bound device memory to the data pointer handle
     VkResult map();
     //Unmaps the data pointer handle
     void unmap();
+
     void transferData(const void* src, size_t size);
     void cleanUp();
  
 private:
+    bool mapped = false;
     VulkanContext* context;
-    VkDeviceMemory bufferMemory;
+    VmaAllocation allocation;
+
+    static int bufferCount;
 };
 
 #endif

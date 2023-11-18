@@ -5,6 +5,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
+#include "vk_mem_alloc.h"
 
 #include "VulkanCommon.h"
 
@@ -50,6 +51,8 @@ public:
     bool resized; //whether window has resized or not
     GLFWwindow* window;
 
+    VmaAllocator vmAlloc;
+
     //properties for different types of descriptors.
     VkPhysicalDeviceDescriptorBufferPropertiesEXT* descBufferProps;
     //properties of the physical device being used
@@ -67,6 +70,7 @@ public:
 
 private:
     void createInstance();
+    void initVMA();
 	
     bool checkValidationLayerSupport();
 

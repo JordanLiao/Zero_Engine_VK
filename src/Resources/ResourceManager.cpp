@@ -47,18 +47,23 @@ bool ResourceManager::initialized;
 
 
 VulkanContext* ResourceManager::vulkanContext;
-VulkanCommandPool ResourceManager::vulkanCommandPool;
+VulkanCommandPool ResourceManager::vulkanTransferCmdPool;
+VulkanCommandPool ResourceManager::vulkanGraphicsCmdPool;
 
 void ResourceManager::init(VulkanContext* context) {
     vulkanContext = context;
-    vulkanCommandPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                                          vulkanContext->queueFamilyIndices.transferFamily.value(),
-                                          vulkanContext->logicalDevice);
+    vulkanTransferCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                                                  vulkanContext->queueFamilyIndices.transferFamily.value(),
+                                                  vulkanContext->logicalDevice);
+    vulkanGraphicsCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                                                vulkanContext->queueFamilyIndices.graphicsFamily.value(),
+                                                vulkanContext->logicalDevice);
     initialized = true;
 }
 
 void ResourceManager::cleanup() {
-    vulkanCommandPool.cleanUp();
+    vulkanTransferCmdPool.cleanUp();
+    vulkanGraphicsCmdPool.cleanUp();
     initialized = false;
 }
 
@@ -68,6 +73,59 @@ uint32_t ResourceManager::getTextureId(std::string& textureName){
 
 std::unordered_map<std::string, Material*> ResourceManager::getMaterialMap(std::string& materialMapName){
     return std::unordered_map<std::string, Material*>();
+}
+
+Image ResourceManager::loadImage(const char* path, EngineFormats::ImageFormat format) {
+    stbi_uc* pixels = nullptr;
+    Image image;
+    if (format == EngineFormats::RGBA) {
+        pixels = stbi_load(path, (int*)&image.width, (int*)&image.height, (int*)&image.channels, STBI_rgb_alpha);
+    }
+    else {
+        throw std::runtime_error("Cannot load this image format yet!");
+    }
+
+
+    if (!pixels) {
+        throw std::runtime_error("failed to load texture image!");
+    }
+
+
+    VkFormat imgFormat;
+    if (format == EngineFormats::RGBA) {
+        imgFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    }
+
+    VulkanImageUtils::createImage2D(image.data, image.width, image.height, imgFormat, VK_IMAGE_TILING_OPTIMAL, 
+                                    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vulkanContext);
+
+    int imageSize = image.width * image.height * 4;
+    VulkanBuffer stagingBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vulkanContext);
+    stagingBuffer.map();
+    stagingBuffer.transferData(pixels, (size_t)imageSize);
+    stagingBuffer.unmap();
+
+    VkCommandBuffer commandBuffer = VulkanCommandUtils::beginSingleTimeCommands(vulkanGraphicsCmdPool);
+    VulkanImageUtils::transitionImageLayout(image.data.vkImage, VK_IMAGE_LAYOUT_UNDEFINED, 
+                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
+    VulkanImageUtils::copyBufferToImage(stagingBuffer.vkBuffer, image.data.vkImage, (uint32_t)image.width, (uint32_t)image.height, 
+                                        commandBuffer);
+    VulkanImageUtils::transitionImageLayout(image.data.vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+                                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
+    VulkanCommandUtils::endSingleTimeCommands(commandBuffer, vulkanGraphicsCmdPool);
+
+    stagingBuffer.cleanUp();
+    freeImageData((char*)pixels);
+
+    return image;
+}
+
+void ResourceManager::freeImageData(char* pixels) {
+    if (pixels == nullptr)
+        return;
+    stbi_image_free((stbi_uc*)pixels);
 }
 
 Material * ResourceManager::loadMaterial(const aiMaterial * mtl) {
@@ -133,6 +191,7 @@ Object* ResourceManager::loadObject(const char* fPath) {
 	int indexOffset = 0; //denotes the boundary in "indices" where a mesh begins
 
 	//Parse the mesh data of the model/scene, including vertex data, bone data etc.
+    obj->meshList.reserve(pScene->mNumMeshes);
 	for (unsigned int i = 0; i < pScene->mNumMeshes; i++) {
 		aiMesh* pMesh = pScene->mMeshes[i];
 		std::string meshName = std::string(pMesh->mName.C_Str());
@@ -141,7 +200,7 @@ Object* ResourceManager::loadObject(const char* fPath) {
 		processMeshFaces(pMesh, indexbuffer.triangles, vertexOffset);
 		//processMeshBones(pMesh, obj, vertToBone, obj->boneNameToID, vertexOffset);
 
-		Mesh* mesh = new Mesh(meshName, loadMaterial(pScene->mMaterials[pMesh->mMaterialIndex]), indexOffset, pMesh->mNumFaces * 3);
+		Mesh mesh(meshName, loadMaterial(pScene->mMaterials[pMesh->mMaterialIndex]), indexOffset, pMesh->mNumFaces * 3);
 		obj->meshList.push_back(mesh);
 
 		indexOffset = indexOffset + pMesh->mNumFaces * 3;
@@ -152,8 +211,8 @@ Object* ResourceManager::loadObject(const char* fPath) {
 	//if(pScene->HasAnimations())
 		//processAnimations(pScene, obj, obj->boneNameToID);
 
-    obj->vulkanVertexBuffers = VulkanBufferUtils::createVertexBuffers(vertexBuffer, vulkanCommandPool, vulkanContext);
-    obj->vulkanIndexBuffer = VulkanBufferUtils::createIndexBuffer(indexbuffer, vulkanCommandPool, vulkanContext);
+    obj->vkVertexBuffers = VulkanBufferUtils::createVertexBuffers(vertexBuffer, vulkanTransferCmdPool, vulkanContext);
+    obj->vkIndexBuffer = VulkanBufferUtils::createIndexBuffer(indexbuffer, vulkanTransferCmdPool, vulkanContext);
 
 	return obj;
 }

@@ -2,6 +2,7 @@
 #define _VULKANDESCRIPTORALLOCATOR_H_
 
 #include "VulkanBuffer.h"
+#include "VulkanDescriptorSet.h"
 
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -10,6 +11,12 @@ class VulkanContext;
 
 class VulkanDescriptorAllocator {
 public:
+    //number of memory backed VulkanDescriptorAllocators created during the runtime of the program.
+    static uint32_t numAllocators;
+    //Descriptor Buffer binding infos
+    static std::vector<VkDescriptorBufferBindingInfoEXT> allocBindingInfos;
+
+    uint32_t bindingIndex; //binding index of this allocator
     VkDeviceAddress deviceAddress;
 
     VulkanDescriptorAllocator();
@@ -22,8 +29,11 @@ public:
     * @param bindingInfos A vector of VkDescriptorSetLayoutBinding for the to-be created descriptor set.
     * @param layout The VkDescriptorSetLayout for the to-be created descriptor set.
     */
-    bool getDescriptor(VkDeviceSize& descOffset, const std::vector<std::vector<VulkanBuffer*>>& resources,
-                    const std::vector<VkDescriptorSetLayoutBinding>& bindingInfos, VkDescriptorSetLayout layout);
+    VkDeviceSize getDescriptor(const std::vector<std::vector<VulkanBuffer*>>& resources, 
+                               const std::vector<VkDescriptorSetLayoutBinding>& bindingInfos, VkDescriptorSetLayout layout);
+
+    VulkanDescriptorSet createDescriptorSet(const std::vector<VkDescriptorSetLayoutBinding>& bindingInfos, VkDescriptorSetLayout layout);
+
     void cleanUp();
 
 private:
@@ -31,7 +41,7 @@ private:
 
     uint64_t allocatedSize;
     VkDeviceSize offset;
-    VulkanBuffer descriptorBuffer;
+    VulkanBuffer freeBuffer;
     VulkanContext* context;
 };
 

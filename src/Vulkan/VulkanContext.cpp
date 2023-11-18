@@ -20,6 +20,7 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     //save queue family indices only after physicalDevice is set
     queueFamilyIndices = findQueueFamilies(physicalDevice); 
     createLogicalDevice();
+    initVMA();
 
     resized = false;
     
@@ -91,6 +92,17 @@ void VulkanContext::createInstance() {
     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
+}
+
+void VulkanContext::initVMA() {
+    VmaAllocatorCreateInfo allocatorCreateInfo = {};
+    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+    allocatorCreateInfo.physicalDevice = physicalDevice;
+    allocatorCreateInfo.device = logicalDevice;
+    allocatorCreateInfo.instance = instance;
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+
+    vmaCreateAllocator(&allocatorCreateInfo, &vmAlloc);
 }
 
 bool VulkanContext::checkValidationLayerSupport() {
@@ -260,6 +272,7 @@ void VulkanContext::createLogicalDevice() {
 }
 
 void VulkanContext::cleanUp() {
+    vmaDestroyAllocator(vmAlloc);
     vkDestroyDevice(logicalDevice, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);

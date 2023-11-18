@@ -45,11 +45,12 @@ public:
     void beginDrawCalls(const glm::mat4& projView);
 
     /**
-    * @param numIndices The number of indices to draw.
     * @param indexBuffer VkBuffer handle to the indexBuffer.
     * @param vertexBuffers A pointer to the Vkbuffer array.
+    * @param numIndices The number of indices to draw.
+    * @param indexOffset The offset to the first index to draw in the indexBuffer.
     */
-    void draw(uint32_t numIndices, VkBuffer indexBuffer, VkBuffer* vertexBuffers);
+    void draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset);
 	
     /*
 	    submits currentFrame's commandBuffer
@@ -65,7 +66,7 @@ private:
     VulkanSwapchain swapchain;
     void recreateSwapchain();
 
-    VulkanCommandPool commandPool;
+    VulkanCommandPool graphicsCmdPool, transferCmdPool;
     std::vector<VkCommandBuffer> commandBuffers; //one commandBuffer per frame in flight
     void createCommandBuffers();
 
@@ -89,19 +90,20 @@ private:
     PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
     PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
 
+    VulkanDescriptorAllocator uniDescAllocator;
+    VulkanDescriptorAllocator texDescAllocator;
+
     VulkanDescriptorBuffer globalDescriptorSetBuffer;
     VulkanDescriptorBuffer perFrameDescriptorSetBuffers; //multiple perFrame descriptor sets buffers packed into one.
-    VulkanDescriptorAllocator descAllocator;
     std::vector<VkDeviceSize> perFrameDescOffsets;
     VkDeviceSize globalDescOffset;
     void createDescriptorSets();
 
+    VkSampler sampler2D;
+
     //initial testing pipeline, there could be many different pipelines
     VulkanGraphicsPipeline pipeline;
     void createPipelines();
-
-    //VkDescriptorPool descriptorPool;
-    //void createDescriptorPool();
 };
 
 #endif

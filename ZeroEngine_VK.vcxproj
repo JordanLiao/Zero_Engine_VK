@@ -49,7 +49,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -67,7 +67,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -100,6 +100,7 @@
     <ClCompile Include="src\Vulkan\VulkanContext.cpp" />
     <ClCompile Include="src\Vulkan\VulkanDescriptorAllocator.cpp" />
     <ClCompile Include="src\Vulkan\VulkanGraphicsPipeline.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanMemoryAllocator.cpp" />
     <ClCompile Include="src\Vulkan\VulkanRenderer.cpp" />
     <ClCompile Include="src\Vulkan\VulkanRendererUtils.cpp" />
     <ClCompile Include="src\Vulkan\VulkanSwapchain.cpp" />
@@ -108,8 +109,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphics\Bone.h" />
+    <ClInclude Include="src\Graphics\Image.h" />
     <ClInclude Include="src\Graphics\Instance.h" />
     <ClInclude Include="src\Graphics\SkeletalAnimation.h" />
+    <ClInclude Include="src\Resources\Formats.h" />
     <ClInclude Include="src\Resources\ResourceManager.h" />
     <ClInclude Include="src\Resources\GraphicsBuffers.h" />
     <ClInclude Include="src\Graphics\Mesh.h" />
@@ -126,8 +129,10 @@
     <ClInclude Include="src\Vulkan\VulkanCommandUtils.h" />
     <ClInclude Include="src\Vulkan\VulkanContext.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
+    <ClInclude Include="src\Vulkan\VulkanDescriptor.h" />
     <ClInclude Include="src\Vulkan\VulkanDescriptorAllocator.h" />
     <ClInclude Include="src\Vulkan\VulkanDescriptorBuffer.h" />
+    <ClInclude Include="src\Vulkan\VulkanDescriptorSet.h" />
     <ClInclude Include="src\Vulkan\VulkanGraphicsPipeline.h" />
     <ClInclude Include="src\Vulkan\VulkanRenderer.h" />
     <ClInclude Include="src\Vulkan\VulkanRendererUtils.h" />

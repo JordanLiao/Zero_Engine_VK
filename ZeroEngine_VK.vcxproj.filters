@@ -93,6 +93,9 @@
     <ClCompile Include="src\Vulkan\VulkanDescriptorAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanMemoryAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Window.h">
@@ -174,6 +177,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanDescriptorAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Resources\Formats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Graphics\Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanDescriptorSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanDescriptor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

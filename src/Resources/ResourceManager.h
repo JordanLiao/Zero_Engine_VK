@@ -3,7 +3,11 @@
 
 #include "VulkanContext.h"
 #include "VulkanCommandPool.h"
+#include "VulkanCommandUtils.h"
+#include "VulkanImage.h"
 #include "Material.h"
+#include "Formats.h"
+#include "Image.h"
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
@@ -41,7 +45,8 @@ class ResourceManager {
 private:
     static bool initialized;
     static VulkanContext* vulkanContext;
-    static VulkanCommandPool vulkanCommandPool;
+    static VulkanCommandPool vulkanTransferCmdPool;
+    static VulkanCommandPool vulkanGraphicsCmdPool;
 
 	//map of texture name to texture id
 	static std::unordered_map<std::string, uint32_t> textureMap;
@@ -60,17 +65,16 @@ public:
 	static uint32_t getTextureId(std::string& textureName);
 	static std::unordered_map<std::string, Material*> getMaterialMap(std::string& materialMapName);
 
+    static Image loadImage(const char* path, EngineFormats::ImageFormat format);
+    static void freeImageData(char* image);
+
 	static Material* loadMaterial(const aiMaterial * mtl);
 	
-	/*
-		Load a FBX/OBJ file in the asset folder and return a reference to an untransformed static 3D object.
-	*/
 	static Object* loadObject(const char* fName);
 
 	//extract the file name from the file path
 	static std::string getFileNameFromPath(std::string& fPath);
 
-	
 	//extract the prefix folder path /a/b/ from full file path /a/b/file.ext
 	static std::string getFolderPath(std::string& fPath);
 
