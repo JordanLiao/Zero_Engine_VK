@@ -29,7 +29,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+    VkPipelineShaderStageCreateInfo shaderStages[2] = { vertShaderStageInfo, fragShaderStageInfo };
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     auto bindingDescription = VulkanVertexBufferInfo::vertexBindings;
@@ -127,13 +127,19 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     depthStencil.front = {}; // Optional
     depthStencil.back = {}; // Optional
 
+    //setup push constants
+    VkPushConstantRange pushConstant;
+    pushConstant.offset = 0;
+    pushConstant.size = sizeof(VulkanUniformInfos::PushConstant);
+    pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-    if (vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    pipelineLayoutInfo.pushConstantRangeCount = 1; // Optional
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstant; // Optional
+    if (vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -158,7 +164,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const std::string& vert, const st
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = layout;
     pipelineInfo.renderPass = nullptr; //instead of renderPass, we will use dynamic rendering
     pipelineInfo.subpass = 0;
     //pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
@@ -202,6 +208,6 @@ std::vector<char> VulkanGraphicsPipeline::readFile(const std::string& filename) 
 void VulkanGraphicsPipeline::cleanUp() {
     if(graphicsPipeline != VK_NULL_HANDLE)
         vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
-    if(pipelineLayout != VK_NULL_HANDLE)
-        vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+    if(layout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(logicalDevice, layout, nullptr);
 }

@@ -5,9 +5,11 @@
 #include "VulkanCommandPool.h"
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanBuffer.h"
-#include "VulkanBufferArray.h"
-#include "VulkanRendererUtils.h"
 #include "VulkanDescriptorAllocator.h"
+#include "VulkanUniformInfos.h"
+#include "VulkanDescriptorSet.h"
+#include "VulkanRendererInfos.h"
+#include "../Resources/Image.h"
 
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/glm.hpp"
@@ -16,33 +18,20 @@
 #include <vector>
 
 class VulkanContext;
-
-#define MAX_FRAMES_IN_FLIGHT 2
-
-//size of the descriptor allocator buffer to hold all descriptor sets
-#define DESCRIPTOR_ALLOCATOR_BUFFER_SIZE 10000
-
-const std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutInfos  = {
-    { //global descriptor set
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4, VK_SHADER_STAGE_FRAGMENT_BIT, VK_NULL_HANDLE}
-    },
-    { //per frame descriptor set, containing projection, view etc.
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, VK_NULL_HANDLE}
-    }
-};
+class VulkanResourceManager;
 
 class VulkanRenderer {
 public:
     VulkanRenderer();
-    VulkanRenderer(VulkanContext* context);
+    VulkanRenderer(VulkanContext* context, VulkanResourceManager* rManager);
 
-    std::vector<VulkanBuffer> globalUBO;
-    //VulkanBuffer globalUBO;
+    //std::vector<VulkanBuffer> globalUBO;
+
     /**
 	*   Resets commandBuffers[currentFrame], and make ready the renderer to record draw commands.
     *   @param projView The projection view matrix used for drawing frame of index currentFrame.
     */
-    void beginDrawCalls(const glm::mat4& projView);
+    void beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView);
 
     /**
     * @param indexBuffer VkBuffer handle to the indexBuffer.
@@ -50,7 +39,8 @@ public:
     * @param numIndices The number of indices to draw.
     * @param indexOffset The offset to the first index to draw in the indexBuffer.
     */
-    void draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset);
+    void draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, 
+              glm::mat4& model, glm::ivec4& pbrMat);
 	
     /*
 	    submits currentFrame's commandBuffer
@@ -81,25 +71,17 @@ private:
 
     VulkanImage depthImage;
     VkFormat depthFormat;
-    void createDepthResources();
+    void createDepthMap();
     
-    //Layouts and sizes are in the same order as descriptorSetLayoutInfos above
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    std::vector<VkDeviceSize> descriptorSetLayoutSizes;
 
     PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
     PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
 
-    VulkanDescriptorAllocator uniDescAllocator;
-    VulkanDescriptorAllocator texDescAllocator;
+    VulkanResourceManager* rManager;
 
-    VulkanDescriptorBuffer globalDescriptorSetBuffer;
-    VulkanDescriptorBuffer perFrameDescriptorSetBuffers; //multiple perFrame descriptor sets buffers packed into one.
-    std::vector<VkDeviceSize> perFrameDescOffsets;
-    VkDeviceSize globalDescOffset;
+    VulkanDescriptorAllocator descAllocator;
+    VulkanDescriptorSet perframeDescSet;
     void createDescriptorSets();
-
-    VkSampler sampler2D;
 
     //initial testing pipeline, there could be many different pipelines
     VulkanGraphicsPipeline pipeline;

@@ -1,13 +1,17 @@
 #ifndef _RESOURCEMANAGER_H_
 #define _RESOURCEMANAGER_H_
 
-#include "VulkanContext.h"
+#ifdef USE_VULKAN
 #include "VulkanCommandPool.h"
 #include "VulkanCommandUtils.h"
 #include "VulkanImage.h"
-#include "Material.h"
+class VulkanContext;
+class VulkanResourceManager;
+#endif
+
 #include "Formats.h"
 #include "Image.h"
+#include "../Resources/GraphicsBuffers.h"
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
@@ -18,7 +22,8 @@
 #include <queue>
 #include <string>
 
-struct Object;
+class Object;
+struct EngineMaterial;
 
 #define MAX_NUM_BONE_PER_VERTEX 8
 
@@ -44,44 +49,45 @@ struct BonesForVertex {
 class ResourceManager {
 private:
     static bool initialized;
+
+    //Vulkan-----------------------------/
     static VulkanContext* vulkanContext;
+    static VulkanResourceManager* vulkanResourceManager;
     static VulkanCommandPool vulkanTransferCmdPool;
     static VulkanCommandPool vulkanGraphicsCmdPool;
 
 	//map of texture name to texture id
 	static std::unordered_map<std::string, uint32_t> textureMap;
-	/*mapping mtl "file" names to maps of mtl values.Design decision due to the fact that mtl file
-	names are unique, whereas single mtl struct may not be.*/
-	static std::unordered_map<std::string, std::unordered_map<std::string, Material*>*> mtlMapMap;
+    static VkSampler sampler2D;
+    //----------------------------------/
 
 public:
 	//mapping object names to objects
 	static std::unordered_map<std::string, Object*> objMap;
 	static std::list<Object*> objList;
 
-	static void init(VulkanContext* context);
+	static void init(VulkanContext* context, VulkanResourceManager* rManager);
     static void cleanup();
 
 	static uint32_t getTextureId(std::string& textureName);
-	static std::unordered_map<std::string, Material*> getMaterialMap(std::string& materialMapName);
+	static std::unordered_map<std::string, EngineMaterial*> getMaterialMap(std::string& materialMapName);
 
-    static Image loadImage(const char* path, EngineFormats::ImageFormat format);
+    static Image loadImage(const std::string& path, Formats::ImageFormat format);
     static void freeImageData(char* image);
 
-	static Material* loadMaterial(const aiMaterial * mtl);
+	static EngineMaterial* loadMaterial(const aiMaterial * mtl);
 	
-	static Object* loadObject(const char* fName);
+	static Object* loadObject(const std::string& fName);
 
 	//extract the file name from the file path
-	static std::string getFileNameFromPath(std::string& fPath);
+	static std::string getFileNameFromPath(const std::string& fPath);
 
 	//extract the prefix folder path /a/b/ from full file path /a/b/file.ext
-	static std::string getFolderPath(std::string& fPath);
+	static std::string getFolderPath(const std::string& fPath);
 
 private:
 	//process and record a mesh's vertex attributes.
-	static void processMeshVertices(aiMesh* pMesh, std::vector<glm::vec3>& vert, std::vector<glm::vec3>& norm, 
-									std::vector<glm::vec2>& text);
+	static void processMeshVertices(aiMesh* pMesh, VertexBuffer& buffer);
 	//process and record a mesh's trianges/faces
 	static void processMeshFaces(aiMesh* pMesh, std::vector<glm::ivec3>& indices, int vertexOffset);
 	//process a mesh's bones
@@ -89,6 +95,7 @@ private:
 								std::unordered_map<std::string, unsigned int>& boneNameToID, int vertexOffset);
 
 	static void processAnimations(const aiScene* pScene, Object* obj, std::unordered_map<std::string, unsigned int>& boneNameToID);
+
 };
 
 #endif

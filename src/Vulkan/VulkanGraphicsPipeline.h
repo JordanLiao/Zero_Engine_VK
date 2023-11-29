@@ -1,15 +1,16 @@
 #ifndef _VULKANGRAPHICSPIPELINE_H_
 #define _VULKANGRAPHICSPIPELINE_H_
 
-#include <vulkan/vulkan.h>
+#include "VulkanUniformInfos.h"
 
+#include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
 
 class VulkanGraphicsPipeline {
 public:
     VkPipeline graphicsPipeline;
-    VkPipelineLayout pipelineLayout;
+    VkPipelineLayout layout;
 
     VulkanGraphicsPipeline();
     VulkanGraphicsPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 

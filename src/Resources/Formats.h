@@ -1,7 +1,10 @@
 #pragma once
 
-namespace EngineFormats {
+namespace Formats {
     enum ImageFormat {
-        RGBA,
+        R8G8B8A8,
+        R8G8B8,
+        R8G8,
+        R8,
     };
 }

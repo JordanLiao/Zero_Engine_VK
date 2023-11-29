@@ -1,22 +1,23 @@
-
 #ifndef _OBJECT_H_
 #define _OBJECT_H_
 
-#include <vector>
-#include <string>
-#include <unordered_map>
+#ifdef USE_VULKAN
+#include "../Vulkan/VulkanBuffer.h"
+#endif
 
 #include "SkeletalAnimation.h"
 #include "Node.h"
 #include "Bone.h"
 
-#include "../Vulkan/VulkanBuffer.h"
-#include "../Vulkan/VulkanBufferArray.h"
+#include <vector>
+#include <string>
+#include <unordered_map>
 
 struct Mesh;
 struct Material;
 
-struct Object{
+class Object{
+public:
 	std::string objFileName;
 	glm::mat4 model;
     std::vector<Mesh> meshList; //might want to use a different data structure for efficiency.

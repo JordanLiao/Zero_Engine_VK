@@ -16,7 +16,8 @@ struct VulkanImage {
 
 namespace VulkanImageUtils {
 
-    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkCommandBuffer commandBuffer);
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkImageLayout oldLayout,
+                            VkImageLayout newLayout, const VulkanCommandPool& commandPool);
 
     void createImage2D(VulkanImage& image, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, 
                        VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context);

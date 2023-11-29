@@ -62,3 +62,16 @@ void VulkanBuffer::cleanUp() {
     vmaDestroyBuffer(context->vmAlloc, vkBuffer, allocation);
     bufferCount--;
 }
+
+VulkanBufferArray::VulkanBufferArray() {}
+
+void VulkanBufferArray::addBuffer(const VulkanBuffer& buffer) {
+    buffers.push_back(buffer);
+    vkBuffers.push_back(buffer.vkBuffer);
+}
+
+void VulkanBufferArray::cleanUp() {
+    for (VulkanBuffer buffer : buffers) {
+        buffer.cleanUp();
+    }
+}

@@ -8,8 +8,11 @@
 
 #include <stdexcept>
 
-void VulkanImageUtils::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, 
-                                         VkCommandBuffer commandBuffer) {
+void VulkanImageUtils::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkImageLayout oldLayout,
+                                                        VkImageLayout newLayout, const VulkanCommandPool& commandPool) {
+    VkCommandBuffer commandBuffer = VulkanCommandUtils::beginSingleTimeCommands(commandPool);
+    transitionImageLayout(image, oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
+
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -29,6 +32,9 @@ void VulkanImageUtils::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_
         1,
         &region
     );
+
+    transitionImageLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, newLayout, commandBuffer);
+    VulkanCommandUtils::endSingleTimeCommands(commandBuffer, commandPool);
 }
 
 void VulkanImageUtils::createImage2D(VulkanImage& image, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,

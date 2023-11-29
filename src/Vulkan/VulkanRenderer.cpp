@@ -1,35 +1,34 @@
 #include "VulkanRenderer.h"
 #include "VulkanBufferUtils.h"
 #include "VulkanContext.h"
+#include "VulkanResourceManager.h"
+
+#include "../Resources/ResourceManager.h"
 
 #include <stdexcept>
 #include <iostream>
 
 VulkanRenderer::VulkanRenderer(){}
 
-VulkanRenderer::VulkanRenderer(VulkanContext* context) {
+VulkanRenderer::VulkanRenderer(VulkanContext* context, VulkanResourceManager* rManager) {
     this->context = context;
+    this->rManager = rManager;
+
 	swapchain = VulkanSwapchain(context);
     graphicsCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                     context->queueFamilyIndices.graphicsFamily.value(), context->logicalDevice);
     transferCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                                     context->queueFamilyIndices.transferFamily.value(), context->logicalDevice);
 
-
     vkCmdBindDescriptorBuffersEXT = reinterpret_cast<PFN_vkCmdBindDescriptorBuffersEXT>(
                             vkGetDeviceProcAddr(context->logicalDevice, "vkCmdBindDescriptorBuffersEXT"));
     vkCmdSetDescriptorBufferOffsetsEXT = reinterpret_cast<PFN_vkCmdSetDescriptorBufferOffsetsEXT>(
                             vkGetDeviceProcAddr(context->logicalDevice, "vkCmdSetDescriptorBufferOffsetsEXT"));
 
-    VulkanRendererUtils::createDescriptorSetLayouts(descriptorSetLayoutInfos, descriptorSetLayouts, 
-                                                    descriptorSetLayoutSizes, context);
-    uniDescAllocator = VulkanDescriptorAllocator(DESCRIPTOR_ALLOCATOR_BUFFER_SIZE, 
-                                              VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT, context);
-    texDescAllocator = VulkanDescriptorAllocator(DESCRIPTOR_ALLOCATOR_BUFFER_SIZE,
-                                                 VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT, context);
+    descAllocator = VulkanDescriptorAllocator(GLOBAL_DESCSET_ALLOCATOR_BUFFER_SIZE, VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT, context);
 
-    sampler2D = VulkanImageUtils::createSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, context);
-    createDepthResources();
+    //sampler2D = VulkanImageUtils::createSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, context);
+    createDepthMap();
     createUniformBuffers();
     createDescriptorSets();
     createPipelines();
@@ -37,16 +36,16 @@ VulkanRenderer::VulkanRenderer(VulkanContext* context) {
     createCommandBuffers();
 }
 
-void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
+void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView) {
     vkWaitForFences(context->logicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
     vkResetFences(context->logicalDevice, 1, &inFlightFences[currentFrame]);
 
-    UniformBufferObject ubo{};
+    VulkanUniformInfos::PerFrameUBO ubo{};
     ubo.projView = projView;
-    ubo.viewPos = glm::vec3(0.f, 0.f, 5.f);
+    ubo.viewPos = viewPos;
     perFrameUBOs[currentFrame].transferData(&ubo, sizeof(ubo));
     
-    GlobalUniformBufferObject gubo[4];
+    /*VulkanUniformInfos::GlobalUniformBufferObject gubo[4];
     gubo[0].light = glm::vec3(1.f, 0.f, 0.f);
     gubo[1].light = glm::vec3(0.5f, 0.5f, 0.f);
     gubo[2].light = glm::vec3(0.f, 0.5f, 0.5f);
@@ -56,11 +55,11 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     gubo[2].lightPosition = glm::vec3(10.f, 10.f, 10.f);
     gubo[3].lightPosition = glm::vec3(10.f, -10.f, 10.f);
 
-    int s = sizeof(GlobalUniformBufferObject);
-    globalUBO[0].transferData(gubo, sizeof(GlobalUniformBufferObject));
-    globalUBO[1].transferData(gubo + 1, sizeof(GlobalUniformBufferObject));
-    globalUBO[2].transferData(gubo + 2, sizeof(GlobalUniformBufferObject));
-    globalUBO[3].transferData(gubo + 3, sizeof(GlobalUniformBufferObject));
+    int s = sizeof(VulkanUniformInfos::GlobalUniformBufferObject);
+    globalUBO[0].transferData(gubo, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));
+    globalUBO[1].transferData(gubo + 1, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));
+    globalUBO[2].transferData(gubo + 2, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));
+    globalUBO[3].transferData(gubo + 3, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));*/
 
     //imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next, but it may not 
     //be available immediately, so a semaphore is needed to synchronize vkcommands that depend on the image.
@@ -120,7 +119,6 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = (float)(swapchain.extent.height);
-    //viewport.y = 0.f;
     viewport.width = (float)(swapchain.extent.width);
     viewport.height = -(float)(swapchain.extent.height);
     viewport.minDepth = 0.0f;
@@ -133,28 +131,28 @@ void VulkanRenderer::beginDrawCalls(const glm::mat4& projView) {
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
     /****************************/
 
-    uint32_t uniformDescBufferIndex = 0, samplerDescBufferIndex = 1;
-    VkDescriptorBufferBindingInfoEXT bindingInfo[2]{};
-    bindingInfo[uniformDescBufferIndex].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    bindingInfo[uniformDescBufferIndex].address = uniDescAllocator.deviceAddress;
-    bindingInfo[uniformDescBufferIndex].usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
-    bindingInfo[samplerDescBufferIndex].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    bindingInfo[samplerDescBufferIndex].address = texDescAllocator.deviceAddress;
-    bindingInfo[samplerDescBufferIndex].usage = VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
-
-    //vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], 2, bindingInfo);
-    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], VulkanDescriptorAllocator::allocBindingInfos.size(), 
+    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], VulkanDescriptorAllocator::numAllocators, 
                                                                 VulkanDescriptorAllocator::allocBindingInfos.data());
 
-    uint32_t bufferIndices[2] = { uniformDescBufferIndex, uniformDescBufferIndex };
-    VkDeviceSize offsets[2] = { globalDescOffset , perFrameDescOffsets[currentFrame] };
+    uint32_t bufferIndices[VulkanRendererInfos::numDescRoles] = {2, 0, 1};
+    VkDeviceSize offsets[VulkanRendererInfos::numDescRoles] = {rManager->descSets[VulkanRendererInfos::globalUniform].setOffset,
+                                                               rManager->descSets[VulkanRendererInfos::texSampler].setOffset,
+                                                               rManager->descSets[VulkanRendererInfos::perFrameUniform].setOffset};
     vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        pipeline.pipelineLayout, 0, 2, bufferIndices, offsets);
+                                        pipeline.layout, 0, VulkanRendererInfos::numDescRoles, bufferIndices, offsets);
 }
 
-void VulkanRenderer::draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices,  uint32_t indexOffset) {
-    VkDeviceSize offsets[] = { 0,0 };
-    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, vertexBuffers, offsets);
+void VulkanRenderer::draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices,  uint32_t indexOffset,
+                                                                          glm::mat4& model, glm::ivec4& pbrMat) {
+    VulkanUniformInfos::PushConstant pConst;
+    pConst.frameIndex = currentFrame;
+    pConst.model = model;
+    pConst.maps = pbrMat;
+    vkCmdPushConstants(commandBuffers[currentFrame], pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0, sizeof(VulkanUniformInfos::PushConstant), &pConst);
+
+    VkDeviceSize offsets[5] = {0, 0, 0, 0, 0};
+    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 5, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(commandBuffers[currentFrame], numIndices, 1, indexOffset, 0, 0);
 }
@@ -208,10 +206,10 @@ void VulkanRenderer::submitDrawCalls() {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame = (currentFrame + 1) % FRAMES_IN_FLIGHT;
 }
 
-void VulkanRenderer::createDepthResources() {
+void VulkanRenderer::createDepthMap() {
     depthFormat = VulkanImageUtils::findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
                                                           VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL,
                                                        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, context->physicalDevice);
@@ -220,17 +218,16 @@ void VulkanRenderer::createDepthResources() {
 }
 
 void VulkanRenderer::createUniformBuffers() {
-    globalUBO.resize(descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].descriptorCount);
-    for (uint32_t i = 0; i < descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global][0].descriptorCount; i++) {
-        globalUBO[i] = VulkanBuffer(sizeof(GlobalUniformBufferObject),
+    /*globalUBO.resize(descriptorSetLayoutInfos[VulkanUniformInfos::uniformDescSet][1].descriptorCount);
+    for (uint32_t i = 0; i < descriptorSetLayoutInfos[VulkanUniformInfos::uniformDescSet][1].descriptorCount; i++) {
+        globalUBO[i] = VulkanBuffer(sizeof(VulkanUniformInfos::GlobalUniformBufferObject),
                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
         globalUBO[i].map();
-    }
-
-    perFrameUBOs.reserve(MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        perFrameUBOs.push_back(VulkanBuffer(sizeof(UniformBufferObject),
+    }*/
+    perFrameUBOs.reserve(FRAMES_IN_FLIGHT);
+    for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
+        perFrameUBOs.push_back(VulkanBuffer(sizeof(VulkanUniformInfos::PerFrameUBO),
                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context));
         perFrameUBOs.back().map();
@@ -238,34 +235,41 @@ void VulkanRenderer::createUniformBuffers() {
 }
 
 void VulkanRenderer::createDescriptorSets() {
-    std::vector<std::vector<std::vector<VulkanBuffer*>>> globalUBOBufferPtrs(1, std::vector<std::vector<VulkanBuffer*>>(1));
-    globalUBOBufferPtrs[0][0].reserve(globalUBO.size());
-    for (VulkanBuffer& gubo : globalUBO) {
-        globalUBOBufferPtrs[0][0].push_back(&gubo);
+    std::vector<std::vector<VulkanBuffer*>> bufferPtrs(2, std::vector<VulkanBuffer*>());
+    bufferPtrs[0].reserve(FRAMES_IN_FLIGHT);
+    for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
+       bufferPtrs[0].push_back(&perFrameUBOs[i]);
     }
 
-    globalDescOffset = uniDescAllocator.getDescriptor(globalUBOBufferPtrs[0], descriptorSetLayoutInfos[DescriptorSetLayoutIndex::global],
-                                                        descriptorSetLayouts[DescriptorSetLayoutIndex::global]);
+    perframeDescSet = descAllocator.createDescriptorSet(bufferPtrs, 
+                                                        VulkanRendererInfos::descriptorSetLayoutInfos[VulkanRendererInfos::perFrameUniform],
+                                                        rManager->descriptorSetLayouts[VulkanRendererInfos::perFrameUniform]);
 
-    perFrameDescOffsets.resize(MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        std::vector<std::vector<VulkanBuffer*>> resourcePtr = { {&(perFrameUBOs[i])} };
-        perFrameDescOffsets[i] = uniDescAllocator.getDescriptor(resourcePtr, descriptorSetLayoutInfos[DescriptorSetLayoutIndex::perFrame],
-                                                                descriptorSetLayouts[DescriptorSetLayoutIndex::perFrame]);
-    }
+
+    /*test
+    texture = ResourceManager::loadImage("./assets/starfish.jpg", EngineFormats::RGBA);
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.sampler = sampler2D;
+    imageInfo.imageView = texture.data.vkImageView;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkDescriptorDataEXT descData{};
+    descData.pCombinedImageSampler = &imageInfo;
+
+    texDescSet.updateDescriptor(0, 0, descData); */
 }
 
 void VulkanRenderer::createPipelines() {
-    pipeline = VulkanGraphicsPipeline("./src/shaders/vert.spv", "./src/shaders/frag.spv", 
+    pipeline = VulkanGraphicsPipeline("./src/shaders/pbr_vert.spv", "./src/shaders/pbr_frag.spv", 
                                       VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, 
                                       swapchain.extent, swapchain.format, depthFormat, 
-                                      descriptorSetLayouts, context->logicalDevice);
+                                      rManager->descriptorSetLayouts, context->logicalDevice);
 }
 
 void VulkanRenderer::createSyncObjects() {
-    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores.resize(FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(FRAMES_IN_FLIGHT);
+    inFlightFences.resize(FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -274,7 +278,7 @@ void VulkanRenderer::createSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT; i++) {
         if (vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(context->logicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
@@ -296,13 +300,13 @@ void VulkanRenderer::recreateSwapchain() {
     swapchain = VulkanSwapchain(context);
 
     vkDestroyImageView(context->logicalDevice, depthImage.vkImageView, nullptr);
-    createDepthResources();
+    createDepthMap();
 
     context->resized = false;
 }
 
 void VulkanRenderer::createCommandBuffers() {
-    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    commandBuffers.resize(FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -316,28 +320,19 @@ void VulkanRenderer::createCommandBuffers() {
 }
 
 void VulkanRenderer::cleanUp() {
-    for (VulkanBuffer& gubo : globalUBO) {
-        gubo.cleanUp();
-    }
+    descAllocator.cleanUp();
 
     for (VulkanBuffer& pfUbo : perFrameUBOs) {
         pfUbo.cleanUp();
     }
 
-    uniDescAllocator.cleanUp();
-    texDescAllocator.cleanUp();
-
-    vkDestroySampler(context->logicalDevice, sampler2D, nullptr);
-    for (size_t i = 0; i < descriptorSetLayouts.size(); i++) {
-        vkDestroyDescriptorSetLayout(context->logicalDevice, descriptorSetLayouts[i], nullptr);
-    }
     pipeline.cleanUp();
 
     vkDestroyImageView(context->logicalDevice, depthImage.vkImageView, nullptr);
     vkDestroyImage(context->logicalDevice, depthImage.vkImage, nullptr);
     vkFreeMemory(context->logicalDevice, depthImage.vkDeviceMemory, nullptr);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(context->logicalDevice, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(context->logicalDevice, imageAvailableSemaphores[i], nullptr);
         vkDestroyFence(context->logicalDevice, inFlightFences[i], nullptr);

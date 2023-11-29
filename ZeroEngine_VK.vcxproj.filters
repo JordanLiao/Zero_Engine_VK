@@ -48,9 +48,6 @@
     <ClCompile Include="src\Vulkan\VulkanRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\VulkanBufferArray.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Graphics\Bone.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,10 +63,7 @@
     <ClCompile Include="src\tools\ColorID.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tools\MathConverter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Graphics\Material.cpp">
+    <ClCompile Include="src\Graphics\Z3D_Material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Graphics\Instance.cpp">
@@ -84,9 +78,6 @@
     <ClCompile Include="src\Vulkan\VulkanCommon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\VulkanRendererUtils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\SceneItems\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -94,6 +85,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanMemoryAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanDescriptorSet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanResourceManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tools\MathConverter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -131,9 +131,6 @@
     <ClInclude Include="src\Vulkan\VulkanRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanBufferArray.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Graphics\Bone.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -149,10 +146,7 @@
     <ClInclude Include="src\tools\ColorID.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\tools\MathConverter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Graphics\Material.h">
+    <ClInclude Include="src\Graphics\Z3D_Material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Resources\GraphicsBuffers.h">
@@ -167,12 +161,6 @@
     <ClInclude Include="src\Resources\ResourceManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanRendererUtils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanDescriptorBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\SceneItems\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -182,18 +170,29 @@
     <ClInclude Include="src\Resources\Formats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Graphics\Image.h">
+    <ClInclude Include="src\Resources\Image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanDescriptorSet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanDescriptor.h">
+    <ClInclude Include="src\Vulkan\VulkanUniformInfos.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\VulkanRendererInfos.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tools\MathConverter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\simple.vert" />
     <None Include="src\shaders\simple.frag" />
+    <None Include="src\shaders\pbr.vert" />
+    <None Include="src\shaders\pbr.frag" />
   </ItemGroup>
 </Project>

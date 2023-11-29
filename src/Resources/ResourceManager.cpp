@@ -5,59 +5,44 @@
 #include <stb_image.h>
 #endif
 
-#include "VulkanBufferUtils.h"
 #include "Object.h"
 #include "Mesh.h"
+#include "Z3D_Material.h"
 #include "../tools/MathConverter.h"
 
 #include <iostream>
 #include <stdexcept>
 
+#ifdef USE_VULKAN
+#include "VulkanBufferUtils.h"
+#include "VulkanContext.h"
+#include "VulkanResourceManager.h"
 
-BonesForVertex::BonesForVertex(){
-	for (size_t i = 0; i < MAX_NUM_BONE_PER_VERTEX; i++) {
-		boneIDs[i] = 0;
-		boneWeights[i] = 0.f;
-	}
-}
-
-void BonesForVertex::addBoneWeight(unsigned int boneID, float boneWeight) {
-	for (auto i = 0; i < MAX_NUM_BONE_PER_VERTEX; i++) {
-		if (boneIDs[i] == boneID)
-			return;
-		if(boneWeights[i] == 0.f) {
-			boneIDs[i] = boneID;
-			boneWeights[i] = boneWeight;
-			return;
-		}
-	}
-	std::cerr << "ERROR: Vertex has more than " << MAX_NUM_BONE_PER_VERTEX << " of bones." << std::endl;
-}
+VulkanContext* ResourceManager::vulkanContext;
+VulkanResourceManager* ResourceManager::vulkanResourceManager;
+VkSampler ResourceManager::sampler2D;
+VulkanCommandPool ResourceManager::vulkanTransferCmdPool;
+VulkanCommandPool ResourceManager::vulkanGraphicsCmdPool;
+#endif
 
 std::unordered_map<std::string, uint32_t> ResourceManager::textureMap; //map of texture name to texture id
-//mapping mtl file names to maps of mtl values. Design decision due to the fact that mtl file
-//names are unique, whereas single mtl value may not be.
-std::unordered_map<std::string, std::unordered_map<std::string, Material*>*> ResourceManager::mtlMapMap;
-//mapping object names to objects
+
 std::unordered_map<std::string, Object*> ResourceManager::objMap;
-//list to keep track of all the loaded objects
 std::list<Object*> ResourceManager::objList;
 
 bool ResourceManager::initialized;
 
-
-VulkanContext* ResourceManager::vulkanContext;
-VulkanCommandPool ResourceManager::vulkanTransferCmdPool;
-VulkanCommandPool ResourceManager::vulkanGraphicsCmdPool;
-
-void ResourceManager::init(VulkanContext* context) {
+void ResourceManager::init(VulkanContext* context, VulkanResourceManager* rManager) {
     vulkanContext = context;
+    vulkanResourceManager = rManager;
     vulkanTransferCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                                                   vulkanContext->queueFamilyIndices.transferFamily.value(),
                                                   vulkanContext->logicalDevice);
     vulkanGraphicsCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                                                 vulkanContext->queueFamilyIndices.graphicsFamily.value(),
                                                 vulkanContext->logicalDevice);
+    sampler2D = VulkanImageUtils::createSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, context);
+
     initialized = true;
 }
 
@@ -71,50 +56,61 @@ uint32_t ResourceManager::getTextureId(std::string& textureName){
     return uint32_t();
 }
 
-std::unordered_map<std::string, Material*> ResourceManager::getMaterialMap(std::string& materialMapName){
-    return std::unordered_map<std::string, Material*>();
+std::unordered_map<std::string, EngineMaterial*> ResourceManager::getMaterialMap(std::string& materialMapName){
+    return std::unordered_map<std::string, EngineMaterial*>();
 }
 
-Image ResourceManager::loadImage(const char* path, EngineFormats::ImageFormat format) {
-    stbi_uc* pixels = nullptr;
-    Image image;
-    if (format == EngineFormats::RGBA) {
-        pixels = stbi_load(path, (int*)&image.width, (int*)&image.height, (int*)&image.channels, STBI_rgb_alpha);
+Image ResourceManager::loadImage(const std::string& path, Formats::ImageFormat format) {
+    stbi_set_flip_vertically_on_load(true);
+    
+    VkFormat imgFormat;
+    int comp = 0;
+    if (format == Formats::R8G8B8A8 || format == Formats::R8G8B8) {
+        imgFormat = VK_FORMAT_R8G8B8A8_SRGB;
+        comp = 4;
+    }
+    /*else if(format == Formats::R8G8B8) {
+        imgFormat = VK_FORMAT_R8G8B8_SRGB;
+        comp = 3;
+    }*/
+    else if (format == Formats::R8G8) {
+        imgFormat = VK_FORMAT_R8G8_SRGB;
+        comp = 2;
+    }
+    else if (format == Formats::R8) {
+        imgFormat = VK_FORMAT_R8_SRGB;
+        comp = 1;
     }
     else {
         throw std::runtime_error("Cannot load this image format yet!");
     }
 
-
+    stbi_uc* pixels = nullptr;
+    Image image;
+    pixels = stbi_load(path.c_str(), (int*)&image.width, (int*)&image.height, (int*)&image.channels, comp);
     if (!pixels) {
         throw std::runtime_error("failed to load texture image!");
-    }
-
-
-    VkFormat imgFormat;
-    if (format == EngineFormats::RGBA) {
-        imgFormat = VK_FORMAT_R8G8B8A8_SRGB;
     }
 
     VulkanImageUtils::createImage2D(image.data, image.width, image.height, imgFormat, VK_IMAGE_TILING_OPTIMAL, 
                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vulkanContext);
 
-    int imageSize = image.width * image.height * 4;
+    int imageSize = image.width * image.height * comp;
     VulkanBuffer stagingBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vulkanContext);
     stagingBuffer.map();
     stagingBuffer.transferData(pixels, (size_t)imageSize);
     stagingBuffer.unmap();
 
-    VkCommandBuffer commandBuffer = VulkanCommandUtils::beginSingleTimeCommands(vulkanGraphicsCmdPool);
-    VulkanImageUtils::transitionImageLayout(image.data.vkImage, VK_IMAGE_LAYOUT_UNDEFINED, 
-                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
-    VulkanImageUtils::copyBufferToImage(stagingBuffer.vkBuffer, image.data.vkImage, (uint32_t)image.width, (uint32_t)image.height, 
-                                        commandBuffer);
-    VulkanImageUtils::transitionImageLayout(image.data.vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-                                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
-    VulkanCommandUtils::endSingleTimeCommands(commandBuffer, vulkanGraphicsCmdPool);
+    VulkanImageUtils::copyBufferToImage(stagingBuffer.vkBuffer, image.data.vkImage, image.width, image.height, 
+                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanGraphicsCmdPool);
+
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.sampler = sampler2D;
+    imageInfo.imageView = image.data.vkImageView;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image.texId = vulkanResourceManager->createTexture2D(imageInfo);
 
     stagingBuffer.cleanUp();
     freeImageData((char*)pixels);
@@ -128,12 +124,12 @@ void ResourceManager::freeImageData(char* pixels) {
     stbi_image_free((stbi_uc*)pixels);
 }
 
-Material * ResourceManager::loadMaterial(const aiMaterial * mtl) {
+EngineMaterial * ResourceManager::loadMaterial(const aiMaterial * mtl) {
     if (!initialized) {
         throw std::runtime_error("Resource Manager is not initialized!");
     }
 
-	Material * mat = new Material();
+	EngineMaterial * mat = new EngineMaterial();
 	mat->materialName = std::string(mtl->GetName().C_Str());
 
 	aiColor4D color;
@@ -163,19 +159,19 @@ Material * ResourceManager::loadMaterial(const aiMaterial * mtl) {
 	return mat;
 }
 
-Object* ResourceManager::loadObject(const char* fPath) {
+Object* ResourceManager::loadObject(const std::string& fPath) {
     if (!initialized) {
         throw std::runtime_error("Resource Manager is not initialized!");
     }
 
-	std::string pathName = std::string(fPath);
-    std::string objName = std::string(getFileNameFromPath(pathName));
+    std::string objName = std::string(getFileNameFromPath(fPath));
 	// if this object was loaded previously
 	if (objMap.find(objName) != objMap.end())
 		return objMap[objName];
 
 	Assimp::Importer imp;
-	const aiScene* pScene = imp.ReadFile(fPath, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_FixInfacingNormals);
+	const aiScene* pScene = imp.ReadFile(fPath, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | 
+                                                aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace);
 	if (pScene == nullptr) {
 		printf("Error parsing '%s': '%s'\n", fPath, imp.GetErrorString());
 		return nullptr;
@@ -184,7 +180,6 @@ Object* ResourceManager::loadObject(const char* fPath) {
 	Object* obj = new Object(objName);
 
 	VertexBuffer vertexBuffer; //vertices and normal values of meshes
-	std::vector<glm::vec2> text; //texture coordinates of meshes
 	IndexBuffer indexbuffer; //triangle indices of meshes
 
 	int vertexOffset = 0; //denotes the boundary in "vert" where a mesh begins
@@ -196,7 +191,7 @@ Object* ResourceManager::loadObject(const char* fPath) {
 		aiMesh* pMesh = pScene->mMeshes[i];
 		std::string meshName = std::string(pMesh->mName.C_Str());
 
-		processMeshVertices(pMesh, vertexBuffer.positions, vertexBuffer.normals, text);
+		processMeshVertices(pMesh, vertexBuffer);
 		processMeshFaces(pMesh, indexbuffer.triangles, vertexOffset);
 		//processMeshBones(pMesh, obj, vertToBone, obj->boneNameToID, vertexOffset);
 
@@ -217,15 +212,18 @@ Object* ResourceManager::loadObject(const char* fPath) {
 	return obj;
 }
 
-void ResourceManager::processMeshVertices(aiMesh* pMesh, std::vector<glm::vec3>& vert, std::vector<glm::vec3>& norm, 
-                                          std::vector<glm::vec2>& text) {
+void ResourceManager::processMeshVertices(aiMesh* pMesh, VertexBuffer& buffer) {
 	aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+    //vert.reserve(vert.size() + pMesh->mNumVertices);
+    //norm.reserve(vert.size() + pMesh->mNumVertices);
+    //text.reserve(text.size() + pMesh->mNumVertices);
 	for (unsigned int j = 0; j < pMesh->mNumVertices; j++) {
-		vert.push_back(glm::vec3(pMesh->mVertices[j].x, pMesh->mVertices[j].y, pMesh->mVertices[j].z));
-		//because "aiProcess_GenSmoothNormals" flag above we can always explect normals
-		norm.push_back(glm::vec3(pMesh->mNormals[j].x, pMesh->mNormals[j].y, pMesh->mNormals[j].z));
+		buffer.positions.push_back(glm::vec3(pMesh->mVertices[j].x, pMesh->mVertices[j].y, pMesh->mVertices[j].z));
+		buffer.normals.push_back(glm::vec3(pMesh->mNormals[j].x, pMesh->mNormals[j].y, pMesh->mNormals[j].z));
 		aiVector3D textCoord = pMesh->HasTextureCoords(0) ? pMesh->mTextureCoords[0][j] : Zero3D;
-		text.push_back(glm::vec2(textCoord.x, textCoord.y));
+		buffer.texCoords.push_back(glm::vec2(textCoord.x, textCoord.y));
+        buffer.tangents.push_back(glm::vec3(pMesh->mTangents[j].x, pMesh->mTangents[j].y, pMesh->mTangents[j].z));
+        buffer.bitangents.push_back(glm::vec3(pMesh->mBitangents[j].x, pMesh->mBitangents[j].y, pMesh->mBitangents[j].z));
 	}
 }
 
@@ -264,10 +262,30 @@ void ResourceManager::processAnimations(const aiScene* pScene, Object* obj, std:
 	}
 }
 
-std::string ResourceManager::getFileNameFromPath(std::string& fPath) {
+std::string ResourceManager::getFileNameFromPath(const std::string& fPath) {
     return fPath.substr(fPath.rfind("/") + 1, std::string::npos);
 }
 
-std::string ResourceManager::getFolderPath(std::string& fPath) {
+std::string ResourceManager::getFolderPath(const std::string& fPath) {
     return fPath.substr(0, fPath.rfind("/") + 1);
+}
+
+BonesForVertex::BonesForVertex() {
+    for (size_t i = 0; i < MAX_NUM_BONE_PER_VERTEX; i++) {
+        boneIDs[i] = 0;
+        boneWeights[i] = 0.f;
+    }
+}
+
+void BonesForVertex::addBoneWeight(unsigned int boneID, float boneWeight) {
+    for (auto i = 0; i < MAX_NUM_BONE_PER_VERTEX; i++) {
+        if (boneIDs[i] == boneID)
+            return;
+        if (boneWeights[i] == 0.f) {
+            boneIDs[i] = boneID;
+            boneWeights[i] = boneWeight;
+            return;
+        }
+    }
+    std::cerr << "ERROR: Vertex has more than " << MAX_NUM_BONE_PER_VERTEX << " of bones." << std::endl;
 }

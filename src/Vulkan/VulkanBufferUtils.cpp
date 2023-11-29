@@ -1,7 +1,6 @@
 #include "VulkanBufferUtils.h"
 #include "VulkanCommandUtils.h"
 #include "VulkanCommandPool.h"
-#include "VulkanBufferArray.h"
 #include "VulkanBuffer.h"
 #include "VulkanContext.h"
 
@@ -64,23 +63,39 @@ VulkanBuffer VulkanBufferUtils::createIndexBuffer(const IndexBuffer& indexBuffer
 VulkanBufferArray VulkanBufferUtils::createVertexBuffers(const VertexBuffer& vertexBuffers, VulkanCommandPool& commandPool, 
                                                          VulkanContext* context) {
     VulkanBufferArray result;
-    VkDeviceSize bufferSize;
     if(vertexBuffers.positions.size() > 0) {
-        bufferSize = sizeof(vertexBuffers.positions[0]) * vertexBuffers.positions.size();
-        result.buffers.push_back(createVulkanDataBuffer((void*)vertexBuffers.positions.data(),
-                                                    bufferSize,
-                                                    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
-        result.vkBuffers.push_back(result.buffers.back().vkBuffer); //need a separate VkBuffer handle
+        VkDeviceSize bufferSize = sizeof(vertexBuffers.positions[0]) * vertexBuffers.positions.size();
+        result.addBuffer(createVulkanDataBuffer((void*)vertexBuffers.positions.data(), bufferSize,
+                                                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
     }
 
     if(vertexBuffers.normals.size() > 0) {
-        bufferSize = sizeof(vertexBuffers.normals[0]) * vertexBuffers.normals.size();
-        result.buffers.push_back(createVulkanDataBuffer((void*)vertexBuffers.normals.data(),
-                                                    bufferSize,
-                                                    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
-        result.vkBuffers.push_back(result.buffers.back().vkBuffer);
+        VkDeviceSize bufferSize = sizeof(vertexBuffers.normals[0]) * vertexBuffers.normals.size();
+        result.addBuffer(createVulkanDataBuffer((void*)vertexBuffers.normals.data(), bufferSize,
+                                                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
+    }
+
+    if (vertexBuffers.texCoords.size() > 0) {
+        VkDeviceSize bufferSize = sizeof(vertexBuffers.texCoords[0]) * vertexBuffers.texCoords.size();
+        result.addBuffer(createVulkanDataBuffer((void*)vertexBuffers.texCoords.data(), bufferSize,
+                                                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
+    }
+
+    if (vertexBuffers.tangents.size() > 0) {
+        VkDeviceSize bufferSize = sizeof(vertexBuffers.tangents[0]) * vertexBuffers.tangents.size();
+        result.addBuffer(createVulkanDataBuffer((void*)vertexBuffers.tangents.data(), bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
+    }
+
+    if (vertexBuffers.bitangents.size() > 0) {
+        VkDeviceSize bufferSize = sizeof(vertexBuffers.bitangents[0]) * vertexBuffers.bitangents.size();
+        result.addBuffer(createVulkanDataBuffer((void*)vertexBuffers.bitangents.data(), bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, commandPool, context));
     }
 
     return result;

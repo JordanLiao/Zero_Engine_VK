@@ -1,13 +1,13 @@
 #ifndef _MESH_H_
 #define _MESH_H_
 
-#include "Material.h"
-
 #include <string>
+
+struct EngineMaterial;
 
 struct Mesh {
 	std::string meshName;
-	Material* material;
+	EngineMaterial* material;
 
 	//offset in terms of indices(not vertices) into vao to begin drawing this mesh
 	uint32_t indexOffset;
@@ -24,7 +24,7 @@ struct Mesh {
 		indexOff: offset in terms of indices(not vertices) into VAO to begin drawing this mesh
 		meshSize: number of vertices referenced by this mesh's indices, 3 * num triangles
 	*/
-	Mesh(std::string& name, Material* mtl, int indexOff, int meshSize);
+	Mesh(std::string& name, EngineMaterial* mtl, int indexOff, int meshSize);
 };
 
 #endif
