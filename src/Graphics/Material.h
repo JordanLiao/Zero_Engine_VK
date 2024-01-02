@@ -4,7 +4,7 @@
 #include "GLM/glm.hpp"
 #include <string>
 
-struct EngineMaterial{
+struct Material{
 	std::string materialName;
 	glm::vec3 ambient; //ka
 	glm::vec3 diffuse;  //kd
@@ -16,7 +16,7 @@ struct EngineMaterial{
 	uint32_t illum;  //type of illumination
 	uint32_t diffuseTexture; //map_kd
 
-	EngineMaterial();
+	Material();
 };
 
 struct PBRMaterial {

@@ -1,6 +1,6 @@
 #version 450
 
-layout(location = 0) in vec3 inPosition;
+layout(location = 0) in vec4 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
 
@@ -19,8 +19,8 @@ layout(push_constant) uniform PushConstant {
 } pConst;
 
 void main() {
-    gl_Position = pfUBO[pConst.frameIdx].projView * pConst.model * vec4(inPosition, 1.0f);
-    outPosition = vec3(pConst.model * vec4(inPosition, 1.0));
+    gl_Position = pfUBO[pConst.frameIdx].projView * pConst.model * vec4(inPosition.xyz, 1.0f);
+    outPosition = vec3(pConst.model * vec4(inPosition.xyz, 1.0));
     outNormal = normalize(mat3(transpose(inverse(pConst.model))) * inNormal);
     outTexCoord = inTexCoord;
 }

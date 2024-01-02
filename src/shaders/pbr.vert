@@ -19,7 +19,7 @@ layout(set=0,binding = 0) uniform PerFrameUBO {
 
 layout(push_constant) uniform PushConstant {
     uint frameIndex;
-	mat4 model;
+    mat4 model;
     ivec4 maps;
 } pConst;
 
@@ -29,6 +29,6 @@ void main() {
     outPosition = vec3(model * vec4(inPosition, 1.0));
     outNormal = normalize(mat3(transpose(inverse(model))) * inNormal);
     outTexCoord = inTexCoord;
-	outTangent = inTangent;
-	outBitangent = inBitangent;
+    outTangent = inTangent;
+    outBitangent = inBitangent;
 }

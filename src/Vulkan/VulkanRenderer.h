@@ -3,13 +3,15 @@
 
 #include "VulkanSwapchain.h"
 #include "VulkanCommandPool.h"
-#include "VulkanGraphicsPipeline.h"
+#include "VulkanPipeline.h"
 #include "VulkanBuffer.h"
 #include "VulkanDescriptorAllocator.h"
 #include "VulkanUniformInfos.h"
 #include "VulkanDescriptorSet.h"
 #include "VulkanRendererInfos.h"
 #include "../Resources/Image.h"
+
+#include "../Graphics/Cloth.h"
 
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/glm.hpp"
@@ -25,13 +27,13 @@ public:
     VulkanRenderer();
     VulkanRenderer(VulkanContext* context, VulkanResourceManager* rManager);
 
-    //std::vector<VulkanBuffer> globalUBO;
+    std::vector<VulkanBuffer> globalUBO;
 
     /**
 	*   Resets commandBuffers[currentFrame], and make ready the renderer to record draw commands.
     *   @param projView The projection view matrix used for drawing frame of index currentFrame.
     */
-    void beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView);
+    void beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView, float deltaT);
 
     /**
     * @param indexBuffer VkBuffer handle to the indexBuffer.
@@ -39,13 +41,17 @@ public:
     * @param numIndices The number of indices to draw.
     * @param indexOffset The offset to the first index to draw in the indexBuffer.
     */
-    void draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, 
-              glm::mat4& model, glm::ivec4& pbrMat);
+    void drawPBR(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, glm::mat4& model, glm::ivec4& pbrMat);
+    void drawPhong(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, glm::mat4& model);
 	
     /*
 	    submits currentFrame's commandBuffer
     */
     void submitDrawCalls();
+
+    void beginCompute();
+    void compute(Cloth* cloth, float deltaTime);
+    void submitCompute();
 
     void cleanUp();
 
@@ -56,11 +62,14 @@ private:
     VulkanSwapchain swapchain;
     void recreateSwapchain();
 
-    VulkanCommandPool graphicsCmdPool, transferCmdPool;
+    VulkanCommandPool graphicsCmdPool, transferCmdPool, computeCmdPool;
     std::vector<VkCommandBuffer> commandBuffers; //one commandBuffer per frame in flight
+    std::vector<VkCommandBuffer> computeCmdBuffers;
     void createCommandBuffers();
 
     uint32_t currentFrame = 0;
+    std::vector<VkSemaphore> computeFinishedSemaphores;
+    std::vector<VkFence> computeInFlightFences;
     std::vector<VkSemaphore> imageAvailableSemaphores; //whether an image is available to render to.
     std::vector<VkSemaphore> renderFinishedSemaphores; //whether an image has finished rendering.
     std::vector<VkFence> inFlightFences; //whether cmds for the currentFrame have finished.
@@ -84,7 +93,10 @@ private:
     void createDescriptorSets();
 
     //initial testing pipeline, there could be many different pipelines
-    VulkanGraphicsPipeline pipeline;
+    VulkanPipeline simplePipeline;
+    VulkanPipeline pbrPipeline;
+    VulkanPipeline clothDamperPipeline;
+    VulkanPipeline clothParticlePipeline;
     void createPipelines();
 };
 

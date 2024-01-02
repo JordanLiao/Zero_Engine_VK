@@ -5,13 +5,11 @@
 #include "GLM/gtx/transform.hpp"
 
 Instance::Instance(Object* obj) {
-    object = obj;
+    this->obj = obj;
     model = glm::mat4(1);
     colorId = ColorID::getNewId();
-    instanceName = obj->objFileName + std::to_string(colorId);
+    instName = obj->objFileName + std::to_string(colorId);
 }
-
-Instance::~Instance() {}
 
 void Instance::translate(glm::vec3 trans) {
     pos += trans;

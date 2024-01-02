@@ -11,7 +11,7 @@ int VulkanBuffer::bufferCount = 0;
 VulkanBuffer::VulkanBuffer() : mapped(false), vkBuffer(VK_NULL_HANDLE), context(nullptr), data(nullptr),
                                hostSize(0), allocation(nullptr){}
 
-VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
+VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags properties, 
                            VulkanContext* context){
     mapped = false;
     this->hostSize = size;
@@ -20,7 +20,29 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
 
     VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufferInfo.size = size;
-    bufferInfo.usage = usage;
+    bufferInfo.usage = usageFlags;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+    allocInfo.requiredFlags = properties;
+
+    vmaCreateBuffer(context->vmAlloc, &bufferInfo, &allocInfo, &vkBuffer, &allocation, nullptr);
+    bufferCount++;
+}
+
+VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferCreateFlags createFlags, VkBufferUsageFlags usageFlags, 
+                           VkMemoryPropertyFlags properties, VulkanContext* context) {
+    mapped = false;
+    this->hostSize = size;
+    data = nullptr;
+    this->context = context;
+
+    VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferInfo.size = size;
+    bufferInfo.usage = usageFlags;
+    bufferInfo.flags = createFlags;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo allocInfo = {};

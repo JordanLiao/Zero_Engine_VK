@@ -19,11 +19,11 @@ class VulkanResourceManager;
 
 #include <unordered_map>
 #include <list>
-#include <queue>
 #include <string>
 
 class Object;
-struct EngineMaterial;
+class Cloth;
+struct Material;
 
 #define MAX_NUM_BONE_PER_VERTEX 8
 
@@ -70,14 +70,16 @@ public:
     static void cleanup();
 
 	static uint32_t getTextureId(std::string& textureName);
-	static std::unordered_map<std::string, EngineMaterial*> getMaterialMap(std::string& materialMapName);
+	static std::unordered_map<std::string, Material*> getMaterialMap(std::string& materialMapName);
 
     static Image loadImage(const std::string& path, Formats::ImageFormat format);
     static void freeImageData(char* image);
 
-	static EngineMaterial* loadMaterial(const aiMaterial * mtl);
+	static Material* loadMaterial(const aiMaterial * mtl);
 	
 	static Object* loadObject(const std::string& fName);
+
+    static Cloth* createCloth(int width, int height, float restLength, float particleMass, float springK, float damperK);
 
 	//extract the file name from the file path
 	static std::string getFileNameFromPath(const std::string& fPath);

@@ -1,0 +1,64 @@
+#version 450
+#extension GL_EXT_debug_printf : enable
+
+struct Particle {
+    vec4 velocity;
+    vec4 force;
+};
+
+struct SpringDamper {
+    ivec2 pair;
+	float restLength;
+};
+
+layout(push_constant) uniform PerFrameDeltaTime {
+	float t;
+} deltaT;
+
+layout (set = 0, binding = 0) uniform ClothUBO {
+    float particleMass;
+    float springK;
+    float damperK;
+} clothUBO;
+
+layout(std140, set = 0, binding = 1) buffer SpringDampersSSBO {
+    SpringDamper springDampers[];
+};
+
+layout(std430, set = 0, binding = 2) buffer ParticleStateSSBO {
+   Particle particleStates[];
+};
+
+layout(std140, set = 0, binding = 3) buffer ParticlePosSSBO {
+	vec4 particlePos[];
+};
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+
+	if(i < 10) {
+		particleStates[i].velocity = vec4(0.0);
+		particleStates[i].force = vec4(0.0);
+		
+	} else {
+		//debugPrintfEXT("cmp: %u, force: %f",i , particleStates[i].force.x);
+
+		vec4 acc = particleStates[i].force / clothUBO.particleMass + vec4(0.0, -9.8, 0.0, 0.0);
+		//debugPrintfEXT("cmp: %u, force: %v4f, acc: %v4f, vel: %v4f", i, particleStates[i].force , acc, particleStates[i].velocity);
+		particleStates[i].velocity = particleStates[i].velocity + acc * deltaT.t;
+		particlePos[i] = particlePos[i] + particleStates[i].velocity * deltaT.t;
+		particleStates[i].force = vec4(0.0);
+
+		//simple ground collision
+		if (particlePos[i].y < 0.0) {
+			particlePos[i].y = 0.001;
+			particleStates[i].velocity.y = abs(particleStates[i].velocity.y * 0.1);
+			particleStates[i].velocity.x = particleStates[i].velocity.x * 0.8;
+			particleStates[i].velocity.z = particleStates[i].velocity.z * 0.8;
+		}
+
+
+	}
+}

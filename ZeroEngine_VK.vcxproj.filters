@@ -30,7 +30,7 @@
     <ClCompile Include="src\Vulkan\VulkanSwapchain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\VulkanGraphicsPipeline.cpp">
+    <ClCompile Include="src\Vulkan\VulkanPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanBuffer.cpp">
@@ -63,7 +63,7 @@
     <ClCompile Include="src\tools\ColorID.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Graphics\Z3D_Material.cpp">
+    <ClCompile Include="src\Graphics\Material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Graphics\Instance.cpp">
@@ -75,10 +75,7 @@
     <ClCompile Include="src\Resources\ResourceManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\VulkanCommon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SceneItems\Camera.cpp">
+    <ClCompile Include="src\Graphics\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\VulkanDescriptorAllocator.cpp">
@@ -94,6 +91,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\tools\MathConverter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Graphics\Cloth.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -116,7 +116,7 @@
     <ClInclude Include="src\Vulkan\VulkanSwapchain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\VulkanGraphicsPipeline.h">
+    <ClInclude Include="src\Vulkan\VulkanPipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanCommandPool.h">
@@ -146,7 +146,7 @@
     <ClInclude Include="src\tools\ColorID.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Graphics\Z3D_Material.h">
+    <ClInclude Include="src\Graphics\Material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Resources\GraphicsBuffers.h">
@@ -161,7 +161,7 @@
     <ClInclude Include="src\Resources\ResourceManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\SceneItems\Camera.h">
+    <ClInclude Include="src\Graphics\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanDescriptorAllocator.h">
@@ -188,11 +188,18 @@
     <ClInclude Include="src\tools\MathConverter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Graphics\Cloth.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\simple.vert" />
     <None Include="src\shaders\simple.frag" />
     <None Include="src\shaders\pbr.vert" />
     <None Include="src\shaders\pbr.frag" />
+    <None Include="src\shaders\cloth_particle.comp" />
+    <None Include="src\shaders\cloth_damper.comp" />
+    <None Include="src\shaders\cloth.vert" />
+    <None Include="src\shaders\cloth.frag" />
   </ItemGroup>
 </Project>

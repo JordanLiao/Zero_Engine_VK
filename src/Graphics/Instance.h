@@ -9,16 +9,13 @@ struct Object;
 
 class Instance {
 public:
-	glm::mat4 model;
-	Object* object; //the graphics object that this instance is based on; multiple instances may use the same object
+	Object* obj; //The graphical object that this instance is based on.
 	int colorId;
+	glm::mat4 model;
 	glm::vec3 pos;
-	std::string instanceName;
+	std::string instName;
 
-	Instance(Object *);
-	~Instance();
-
-	//transformation functions
+	Instance(Object*);
 	void translate(glm::vec3 trans);
 };
 

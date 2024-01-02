@@ -16,7 +16,9 @@ VulkanDescriptorAllocator::VulkanDescriptorAllocator(uint64_t size, VkBufferUsag
         throw std::runtime_error("Vulkan Descriptor Buffer usage must have only either Resource or(and) Sampler Bits");
     }
     this->context = context;
-    freeBuffer = VulkanBuffer(size, usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+
+    //
+    freeBuffer = VulkanBuffer(size, VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT, usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
     freeBuffer.map();
     deviceAddress = VulkanBufferUtils::getBufferDeviceAddress(freeBuffer.vkBuffer, context);
@@ -134,6 +136,9 @@ VulkanDescriptorSet VulkanDescriptorAllocator::createDescriptorSet(const std::ve
         }
         else if (bindingInfos[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
             descriptorSize = context->descBufferProps->combinedImageSamplerDescriptorSize;
+        }
+        else if (bindingInfos[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+            descriptorSize = context->descBufferProps->storageBufferDescriptorSize;
         }
         else {
             throw std::runtime_error("Descriptor type currently not supported.");

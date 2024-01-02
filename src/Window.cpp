@@ -1,6 +1,5 @@
 #include "Window.h"
 
-//#include "GLM/gtx/transform.hpp"
 #include "GLFW/glfw3.h"
 
 #include <iostream>
@@ -21,7 +20,7 @@ Window::Window(int width, int height, const char* windowName) {
 
 	window = glfwCreateWindow(width, height, windowName, nullptr, nullptr);
 	if (!window) {
-		throw std::runtime_error("Failed to open GLFW window.");
+		throw std::runtime_error("Failed to open GLFW Window.");
 		glfwTerminate();
 	}
 }

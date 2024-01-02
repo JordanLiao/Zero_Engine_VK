@@ -3,11 +3,11 @@
 
 #include <string>
 
-struct EngineMaterial;
+struct Material;
 
 struct Mesh {
 	std::string meshName;
-	EngineMaterial* material;
+	Material* material;
 
 	//offset in terms of indices(not vertices) into vao to begin drawing this mesh
 	uint32_t indexOffset;
@@ -24,7 +24,7 @@ struct Mesh {
 		indexOff: offset in terms of indices(not vertices) into VAO to begin drawing this mesh
 		meshSize: number of vertices referenced by this mesh's indices, 3 * num triangles
 	*/
-	Mesh(std::string& name, EngineMaterial* mtl, int indexOff, int meshSize);
+	Mesh(std::string& name, Material* mtl, int indexOff, int meshSize);
 };
 
 #endif

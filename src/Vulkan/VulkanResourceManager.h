@@ -20,21 +20,27 @@ public:
         texSamplerAlloc,
         allocCount,
     };
-
     std::vector<VulkanDescriptorAllocator> descAllocs;
+
+    //PBR pipeline descSets
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts; //Layouts and sizes are in the same order as descriptorSetLayoutInfos
     std::vector<VkDeviceSize> descriptorSetLayoutSizes;
     std::vector<VulkanDescriptorSet> descSets;
 
+    //cloth layouts and sizes; placed here for now
+    std::vector<VkDescriptorSetLayout> clothDescSetLayouts;
+    std::vector<VkDeviceSize> clothDescSetLayoutSizes;
+
     VulkanResourceManager();
     VulkanResourceManager(VulkanContext* context);
 
-    std::optional<uint32_t> createTexture2D(VkDescriptorImageInfo& imageInfo);
+    std::optional<uint32_t> addTexture2D(VkDescriptorImageInfo& imageInfo);
     std::optional<uint32_t> addLight(glm::vec3 pos, glm::vec3 color);
-
+    VulkanDescriptorSet addDescriptorSet(DescriptorAllocatorRole allocRole, const std::vector<VkDescriptorSetLayoutBinding>& bindingInfos, 
+                                         VkDescriptorSetLayout layout);
     void cleanUp();
 private:
     VulkanContext* context;
 };
 
-#endif // !_VULKANRESOURCEMANAGER_H_
+#endif

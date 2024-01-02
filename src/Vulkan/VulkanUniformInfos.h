@@ -7,6 +7,7 @@ namespace VulkanUniformInfos {
     struct PerFrameUBO {
         glm::mat4 projView;
         glm::vec3 viewPos;
+        alignas(16) float deltaT;
     };
 
     struct GlobalUBO {
@@ -14,11 +15,21 @@ namespace VulkanUniformInfos {
         alignas(16) glm::vec3 light;
     };
 
-    struct PushConstant {
+    struct PBRConstant {
         uint32_t frameIndex;
         alignas(16)
         glm::mat4 model;
         glm::ivec4 maps;
+    };
+
+    struct PhongConstant {
+        uint32_t frameIndex;
+        alignas(16) 
+        glm::mat4 model;
+    };
+
+    struct DeltaTimeConstant {
+        float dt;
     };
 }
 

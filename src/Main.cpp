@@ -1,21 +1,22 @@
-#include <iostream>
-
-#include "Window.h"
 #include "VulkanContext.h"
+#include "Window.h"
 #include "VulkanResourceManager.h"
-#include "VulkanBuffer.h"
-#include "VulkanBufferUtils.h"
-#include "VulkanCommandPool.h"
-#include "VulkanBufferUtils.h"
 #include "VulkanRenderer.h"
-#include "resources/GraphicsBuffers.h"
+
+#include "Resources/GraphicsBuffers.h"
+#include "Resources/Image.h"
+#include "Resources/ResourceManager.h"
 #include "Graphics/Object.h"
 #include "Graphics/Mesh.h"
-#include "../Resources/Image.h"
-#include "Z3D_Material.h"
+#include "Material.h"
+#include "Cloth.h"
 
+//#define GLFW_INCLUDE_VULKAN
+#include "GLFW/glfw3.h"
 #include "GLM/gtx/transform.hpp"
-#include "../Resources/ResourceManager.h"
+
+#include <chrono>
+#include <iostream>
 
 static glm::mat4 proj;
 
@@ -29,12 +30,14 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 int main(int argc, char* argv[]) {
     uint32_t width = 900, height = 600;
 	Window window(width, height, "Zero Engine VK");
+
 	VulkanContext vulkanContext(window.window);
-    glfwSetWindowUserPointer(window.window, &vulkanContext);
-    glfwSetFramebufferSizeCallback(window.window, framebufferResizeCallback);
     VulkanResourceManager rManager(&vulkanContext);
     ResourceManager::init(&vulkanContext, &rManager);
 	VulkanRenderer renderer(&vulkanContext, &rManager);
+
+    glfwSetWindowUserPointer(window.window, &vulkanContext);
+    glfwSetFramebufferSizeCallback(window.window, framebufferResizeCallback);
 	
     Object* obj = ResourceManager::loadObject("./assets/sphere.obj");
 
@@ -42,6 +45,7 @@ int main(int argc, char* argv[]) {
     Image normalMap = ResourceManager::loadImage("./assets/rustediron/rust_normal.png", Formats::R8G8B8);
     Image roughness = ResourceManager::loadImage("./assets/rustediron/rust_roughness.png", Formats::R8);
     Image metallic = ResourceManager::loadImage("./assets/rustediron/rust_metallic.png", Formats::R8);
+
     /*Image baseColor = ResourceManager::loadImage("./assets/stainlesssteel/used-stainless-steel2_albedo.png", Formats::R8G8B8A8);
     Image normalMap = ResourceManager::loadImage("./assets/stainlesssteel/used-stainless-steel2_normal-ogl.png", Formats::R8G8B8);
     Image roughness = ResourceManager::loadImage("./assets/stainlesssteel/used-stainless-steel2_roughness.png", Formats::R8);
@@ -53,23 +57,46 @@ int main(int argc, char* argv[]) {
     pbr.maps.b = roughness.texId.value();
     pbr.maps.a = metallic.texId.value();
 
-    glm::vec3 viewPos(0.f, 0.0f, 3.f);
+    int w = 100, h = 100;
+    Cloth* cloth = ResourceManager::createCloth(w, h, 10.f / (float)w, 10.f / (float)(w * h), 1000.f, 0.5f);
+
+    glm::vec3 viewPos(0.f, 10.0f, 8.f);
     proj = glm::perspective(glm::radians(50.0f), (float)width / (float)height, 0.1f, 1000.0f);
     glm::mat4 model = glm::scale(glm::vec3(1.f));
 
+    float deltaT = 0.f;
 	while (!glfwWindowShouldClose(window.window)) {
+    //for(int i = 0; i < 10; i++) {
+        //srand((unsigned int)time(nullptr));
+        //std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
 		glfwPollEvents();
+
         glm::mat4 projView = proj * glm::lookAt(viewPos, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-		renderer.beginDrawCalls(viewPos, projView);
-        for (Mesh& m: obj->meshList) {
+
+        renderer.beginCompute();
+        renderer.compute(cloth, 0.0001);
+        renderer.submitCompute();
+
+		renderer.beginDrawCalls(viewPos, projView, deltaT);
+        /*for (Mesh& m: obj->meshList) {
 		    renderer.draw(obj->vkIndexBuffer.vkBuffer,  obj->vkVertexBuffers.vkBuffers.data(), 
                           m.size, m.indexOffset, model, pbr.maps);
-        }
+        }*/
+
+        renderer.drawPhong(cloth->vkIndexBuffer.vkBuffer, cloth->vkVertexBuffers.vkBuffers.data(),
+                    cloth->numIndices, 0, model);
+
 		renderer.submitDrawCalls();
+
+        //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        //deltaT = (float)(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0);
+        //std::cout << deltaT << std::endl;
 	}
 	vkDeviceWaitIdle(vulkanContext.logicalDevice);
 
     obj->cleanUp();
+    cloth->cleanUp();
 
     ResourceManager::cleanup();
     rManager.cleanUp();

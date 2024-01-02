@@ -20,9 +20,13 @@ VulkanResourceManager::VulkanResourceManager(VulkanContext* context) {
     descSets[VulkanRendererInfos::texSampler] = descAllocs[texSamplerAlloc].createDescriptorSet(
                                                 VulkanRendererInfos::descriptorSetLayoutInfos[VulkanRendererInfos::texSampler],
                                                 descriptorSetLayouts[VulkanRendererInfos::texSampler]);
+
+    //cloth
+    VulkanDescriptorSet::createDescriptorSetLayouts(clothDescSetLayoutSizes,  clothDescSetLayouts,
+                                                    VulkanRendererInfos::clothPipelineLayoutInfos, context);
 }
 
-std::optional<uint32_t> VulkanResourceManager::createTexture2D(VkDescriptorImageInfo& imageInfo) {
+std::optional<uint32_t> VulkanResourceManager::addTexture2D(VkDescriptorImageInfo& imageInfo) {
     VkDescriptorDataEXT descData{};
     descData.pCombinedImageSampler = &imageInfo;
 
@@ -31,6 +35,11 @@ std::optional<uint32_t> VulkanResourceManager::createTexture2D(VkDescriptorImage
 
 std::optional<uint32_t> VulkanResourceManager::addLight(glm::vec3 pos, glm::vec3 color) {
     return std::optional<uint32_t>();
+}
+
+VulkanDescriptorSet VulkanResourceManager::addDescriptorSet(DescriptorAllocatorRole allocRole, 
+                               const std::vector<VkDescriptorSetLayoutBinding>& bindingInfos, VkDescriptorSetLayout layout) {
+    return descAllocs[allocRole].createDescriptorSet(bindingInfos, layout);
 }
 
 void VulkanResourceManager::cleanUp() {

@@ -2,9 +2,11 @@
 #include "VulkanBufferUtils.h"
 #include "VulkanContext.h"
 #include "VulkanResourceManager.h"
+#include "VulkanUniformInfos.h"
 
 #include "../Resources/ResourceManager.h"
 
+#include "GLFW/glfw3.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -19,6 +21,8 @@ VulkanRenderer::VulkanRenderer(VulkanContext* context, VulkanResourceManager* rM
                                     context->queueFamilyIndices.graphicsFamily.value(), context->logicalDevice);
     transferCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                                     context->queueFamilyIndices.transferFamily.value(), context->logicalDevice);
+    computeCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                                    context->queueFamilyIndices.computeFamily.value(), context->logicalDevice);
 
     vkCmdBindDescriptorBuffersEXT = reinterpret_cast<PFN_vkCmdBindDescriptorBuffersEXT>(
                             vkGetDeviceProcAddr(context->logicalDevice, "vkCmdBindDescriptorBuffersEXT"));
@@ -36,30 +40,31 @@ VulkanRenderer::VulkanRenderer(VulkanContext* context, VulkanResourceManager* rM
     createCommandBuffers();
 }
 
-void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView) {
+void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView, float deltaT) {
     vkWaitForFences(context->logicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
     vkResetFences(context->logicalDevice, 1, &inFlightFences[currentFrame]);
 
     VulkanUniformInfos::PerFrameUBO ubo{};
     ubo.projView = projView;
     ubo.viewPos = viewPos;
+    ubo.deltaT = deltaT;
     perFrameUBOs[currentFrame].transferData(&ubo, sizeof(ubo));
     
-    /*VulkanUniformInfos::GlobalUniformBufferObject gubo[4];
+    /*VulkanUniformInfos::GlobalUBO gubo[4];
     gubo[0].light = glm::vec3(1.f, 0.f, 0.f);
     gubo[1].light = glm::vec3(0.5f, 0.5f, 0.f);
     gubo[2].light = glm::vec3(0.f, 0.5f, 0.5f);
     gubo[3].light = glm::vec3(0.f, 0.f, 1.f);
-    gubo[0].lightPosition = glm::vec3(-10.f, 10.f, 10.f);
-    gubo[1].lightPosition = glm::vec3(-10.f, -10.f, 10.f);
-    gubo[2].lightPosition = glm::vec3(10.f, 10.f, 10.f);
-    gubo[3].lightPosition = glm::vec3(10.f, -10.f, 10.f);
+    gubo[0].lightPos = glm::vec3(-10.f, 10.f, 10.f);
+    gubo[1].lightPos = glm::vec3(-10.f, -10.f, 10.f);
+    gubo[2].lightPos = glm::vec3(10.f, 10.f, 10.f);
+    gubo[3].lightPos = glm::vec3(10.f, -10.f, 10.f);
 
-    int s = sizeof(VulkanUniformInfos::GlobalUniformBufferObject);
-    globalUBO[0].transferData(gubo, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));
-    globalUBO[1].transferData(gubo + 1, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));
-    globalUBO[2].transferData(gubo + 2, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));
-    globalUBO[3].transferData(gubo + 3, sizeof(VulkanUniformInfos::GlobalUniformBufferObject));*/
+    int s = sizeof(VulkanUniformInfos::GlobalUBO);
+    globalUBO[0].transferData(gubo, sizeof(VulkanUniformInfos::GlobalUBO));
+    globalUBO[1].transferData(gubo + 1, sizeof(VulkanUniformInfos::GlobalUBO));
+    globalUBO[2].transferData(gubo + 2, sizeof(VulkanUniformInfos::GlobalUBO));
+    globalUBO[3].transferData(gubo + 3, sizeof(VulkanUniformInfos::GlobalUBO));*/
 
     //imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next, but it may not 
     //be available immediately, so a semaphore is needed to synchronize vkcommands that depend on the image.
@@ -113,7 +118,7 @@ void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& p
     renderingInfo.pStencilAttachment = VK_NULL_HANDLE;
 
     vkCmdBeginRendering(commandBuffers[currentFrame], &renderingInfo);
-    vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+    vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, simplePipeline.pipeline);
 
     /***dynamic states************/
     VkViewport viewport{};
@@ -137,22 +142,36 @@ void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& p
     uint32_t bufferIndices[VulkanRendererInfos::numDescRoles] = {2, 0, 1};
     VkDeviceSize offsets[VulkanRendererInfos::numDescRoles] = {rManager->descSets[VulkanRendererInfos::globalUniform].setOffset,
                                                                rManager->descSets[VulkanRendererInfos::texSampler].setOffset,
-                                                               rManager->descSets[VulkanRendererInfos::perFrameUniform].setOffset};
+                                                               perframeDescSet.setOffset};
     vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        pipeline.layout, 0, VulkanRendererInfos::numDescRoles, bufferIndices, offsets);
+                                        simplePipeline.layout, 0, VulkanRendererInfos::numDescRoles, bufferIndices, offsets);
 }
 
-void VulkanRenderer::draw(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices,  uint32_t indexOffset,
-                                                                          glm::mat4& model, glm::ivec4& pbrMat) {
-    VulkanUniformInfos::PushConstant pConst;
+void VulkanRenderer::drawPBR(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, 
+                          glm::mat4& model, glm::ivec4& pbrMat) {
+    VulkanUniformInfos::PBRConstant pConst;
     pConst.frameIndex = currentFrame;
     pConst.model = model;
     pConst.maps = pbrMat;
-    vkCmdPushConstants(commandBuffers[currentFrame], pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        0, sizeof(VulkanUniformInfos::PushConstant), &pConst);
+    vkCmdPushConstants(commandBuffers[currentFrame], pbrPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0, sizeof(VulkanUniformInfos::PBRConstant), &pConst);
 
     VkDeviceSize offsets[5] = {0, 0, 0, 0, 0};
     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 5, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(commandBuffers[currentFrame], numIndices, 1, indexOffset, 0, 0);
+}
+
+void VulkanRenderer::drawPhong(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset,
+                                glm::mat4& model) {
+    VulkanUniformInfos::PhongConstant pConst;
+    pConst.frameIndex = currentFrame;
+    pConst.model = model;
+    vkCmdPushConstants(commandBuffers[currentFrame], simplePipeline.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0, sizeof(VulkanUniformInfos::PhongConstant), &pConst);
+
+    VkDeviceSize offsets[3] = { 0, 0, 0};
+    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 3, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(commandBuffers[currentFrame], numIndices, 1, indexOffset, 0, 0);
 }
@@ -170,12 +189,13 @@ void VulkanRenderer::submitDrawCalls() {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+    std::vector<VkSemaphore> waitSemaphores = { computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame] };
+    //std::vector<VkSemaphore> waitSemaphores = {imageAvailableSemaphores[currentFrame] };
     //we cannot output color until image becomes availble
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
+    std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = waitSemaphores.size();
+    submitInfo.pWaitSemaphores = waitSemaphores.data();
+    submitInfo.pWaitDstStageMask = waitStages.data();
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
@@ -209,6 +229,73 @@ void VulkanRenderer::submitDrawCalls() {
     currentFrame = (currentFrame + 1) % FRAMES_IN_FLIGHT;
 }
 
+void VulkanRenderer::beginCompute() {
+    vkWaitForFences(context->logicalDevice, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(context->logicalDevice, 1, &computeInFlightFences[currentFrame]);
+
+    vkResetCommandBuffer(computeCmdBuffers[currentFrame],  0);
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(computeCmdBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    vkCmdBindDescriptorBuffersEXT(computeCmdBuffers[currentFrame], 1,
+                                  &VulkanDescriptorAllocator::allocBindingInfos[VulkanResourceManager::uboAlloc]);
+}
+
+void VulkanRenderer::compute(Cloth* cloth, float deltaTime) {
+    uint32_t bufferIndices[VulkanRendererInfos::numDescRoles] = {0};
+    VkDeviceSize offsets[1] = {cloth->descSet.setOffset};
+    vkCmdSetDescriptorBufferOffsetsEXT(computeCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE,
+                                clothDamperPipeline.layout, 0, 1, bufferIndices, offsets);
+
+    VulkanUniformInfos::DeltaTimeConstant dTime;
+    dTime.dt = deltaTime;
+
+    vkCmdBindPipeline(computeCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE, clothDamperPipeline.pipeline);
+    vkCmdPushConstants(computeCmdBuffers[currentFrame], clothDamperPipeline.layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                        0, sizeof(VulkanUniformInfos::DeltaTimeConstant), &dTime);
+
+    vkCmdDispatch(computeCmdBuffers[currentFrame], cloth->numDampers / 256 + 1, 1, 1);
+
+    VkMemoryBarrier barrier{ VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(computeCmdBuffers[currentFrame],
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0,
+            1, &barrier,
+            0, nullptr,
+            0, nullptr);
+
+    vkCmdBindPipeline(computeCmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE, clothParticlePipeline.pipeline);
+    vkCmdPushConstants(computeCmdBuffers[currentFrame], clothParticlePipeline.layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                        0, sizeof(VulkanUniformInfos::DeltaTimeConstant), &dTime);
+
+    vkCmdDispatch(computeCmdBuffers[currentFrame], cloth->numPart / 256 + 1 , 1, 1);
+}
+
+void VulkanRenderer::submitCompute() {
+    if (vkEndCommandBuffer(computeCmdBuffers[currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &computeCmdBuffers[currentFrame];
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &computeFinishedSemaphores[currentFrame];
+
+    if (vkQueueSubmit(context->computeQueue, 1, &submitInfo, computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit compute command buffer!");
+    };
+}
+
+
 void VulkanRenderer::createDepthMap() {
     depthFormat = VulkanImageUtils::findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
                                                           VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL,
@@ -218,13 +305,6 @@ void VulkanRenderer::createDepthMap() {
 }
 
 void VulkanRenderer::createUniformBuffers() {
-    /*globalUBO.resize(descriptorSetLayoutInfos[VulkanUniformInfos::uniformDescSet][1].descriptorCount);
-    for (uint32_t i = 0; i < descriptorSetLayoutInfos[VulkanUniformInfos::uniformDescSet][1].descriptorCount; i++) {
-        globalUBO[i] = VulkanBuffer(sizeof(VulkanUniformInfos::GlobalUniformBufferObject),
-                                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, context);
-        globalUBO[i].map();
-    }*/
     perFrameUBOs.reserve(FRAMES_IN_FLIGHT);
     for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
         perFrameUBOs.push_back(VulkanBuffer(sizeof(VulkanUniformInfos::PerFrameUBO),
@@ -244,26 +324,24 @@ void VulkanRenderer::createDescriptorSets() {
     perframeDescSet = descAllocator.createDescriptorSet(bufferPtrs, 
                                                         VulkanRendererInfos::descriptorSetLayoutInfos[VulkanRendererInfos::perFrameUniform],
                                                         rManager->descriptorSetLayouts[VulkanRendererInfos::perFrameUniform]);
-
-
-    /*test
-    texture = ResourceManager::loadImage("./assets/starfish.jpg", EngineFormats::RGBA);
-    VkDescriptorImageInfo imageInfo{};
-    imageInfo.sampler = sampler2D;
-    imageInfo.imageView = texture.data.vkImageView;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    VkDescriptorDataEXT descData{};
-    descData.pCombinedImageSampler = &imageInfo;
-
-    texDescSet.updateDescriptor(0, 0, descData); */
 }
 
 void VulkanRenderer::createPipelines() {
-    pipeline = VulkanGraphicsPipeline("./src/shaders/pbr_vert.spv", "./src/shaders/pbr_frag.spv", 
+    simplePipeline = VulkanPipeline("./src/shaders/clothVert.spv", "./src/shaders/clothFrag.spv",
+                                        VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
+                                        swapchain.extent, swapchain.format, depthFormat, sizeof(VulkanUniformInfos::PhongConstant),
+                                        rManager->descriptorSetLayouts, context);
+    /*pbrPipeline = VulkanPipeline("./src/shaders/pbr_vert.spv", "./src/shaders/pbr_frag.spv", 
                                       VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, 
-                                      swapchain.extent, swapchain.format, depthFormat, 
-                                      rManager->descriptorSetLayouts, context->logicalDevice);
+                                      swapchain.extent, swapchain.format, depthFormat, sizeof(VulkanUniformInfos::PBRConstant),
+                                      rManager->descriptorSetLayouts, context);*/
+    clothDamperPipeline = VulkanPipeline("./src/shaders/cloth_damper.spv",
+                                        VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
+                                        rManager->clothDescSetLayouts, context);
+
+    clothParticlePipeline = VulkanPipeline("./src/shaders/cloth_particle.spv",
+                                        VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
+                                        rManager->clothDescSetLayouts, context);
 }
 
 void VulkanRenderer::createSyncObjects() {
@@ -283,6 +361,16 @@ void VulkanRenderer::createSyncObjects() {
             vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(context->logicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create synchronization objects for a frame!");
+        }
+    }
+
+    computeInFlightFences.resize(FRAMES_IN_FLIGHT);
+    computeFinishedSemaphores.resize(FRAMES_IN_FLIGHT);
+
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &computeFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(context->logicalDevice, &fenceInfo, nullptr, &computeInFlightFences[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create compute synchronization objects for a frame!");
         }
     }
 }
@@ -317,6 +405,17 @@ void VulkanRenderer::createCommandBuffers() {
     if (vkAllocateCommandBuffers(context->logicalDevice, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
+    //-------------------------------------------//
+    computeCmdBuffers.resize(FRAMES_IN_FLIGHT);
+
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandBufferCount = (uint32_t)computeCmdBuffers.size();
+    allocInfo.commandPool = computeCmdPool.commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+    if (vkAllocateCommandBuffers(context->logicalDevice, &allocInfo, computeCmdBuffers.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate command buffers!");
+    }
 }
 
 void VulkanRenderer::cleanUp() {
@@ -326,7 +425,9 @@ void VulkanRenderer::cleanUp() {
         pfUbo.cleanUp();
     }
 
-    pipeline.cleanUp();
+    pbrPipeline.cleanUp();
+    clothDamperPipeline.cleanUp();
+    clothParticlePipeline.cleanUp();
 
     vkDestroyImageView(context->logicalDevice, depthImage.vkImageView, nullptr);
     vkDestroyImage(context->logicalDevice, depthImage.vkImage, nullptr);
