@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
     pbr.maps.b = roughness.texId.value();
     pbr.maps.a = metallic.texId.value();
 
-    int w = 100, h = 100;
-    Cloth* cloth = ResourceManager::createCloth(w, h, 10.f / (float)w, 10.f / (float)(w * h), 1000.f, 0.5f);
+    int w = 50, h = 50;
+    Cloth* cloth = ResourceManager::createCloth(w, h, 10.f / (float)w, 50.f / (float)(w * h), 2000.f, 0.99f);
 
     glm::vec3 viewPos(0.f, 10.0f, 8.f);
     proj = glm::perspective(glm::radians(50.0f), (float)width / (float)height, 0.1f, 1000.0f);

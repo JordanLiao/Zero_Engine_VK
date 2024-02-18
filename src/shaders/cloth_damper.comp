@@ -44,20 +44,14 @@ void main() {
 	//debugPrintfEXT("cmp0 id:%u, x: %d, y: %d",i, p1, p2);
 
     vec4 e = particlePos[p2] - particlePos[p1];
-    //float l = max(length(e), 0.0);
-    //float l = min(length(e), 2.0 * springDampers[i].restLength);
     float l = length(e);
     vec4 closingDir = normalize(e);
     float vClose = dot((particleStates[p1].velocity - particleStates[p2].velocity), closingDir);
     vec4 force = closingDir * (-1.0 * clothUBO.springK * (springDampers[i].restLength - l) - clothUBO.damperK * vClose);
 	//debugPrintfEXT("cmp1: %u pos1: %v4f pos2: %v4f force: %v4f length: %f", i, particlePos[p1], particlePos[p2], force, l);
-	//if(l < 0.0001)
-		//debugPrintfEXT("dist: %f, damperK: %f, vClose: %f", l, clothUBO.damperK, vClose);
 
 	applyForce(p1, force);
 	applyForce(p2, -force);
-
-	//debugPrintfEXT("force: %v4f", )
 }
 
 void applyForce(int p, vec4 force) {
