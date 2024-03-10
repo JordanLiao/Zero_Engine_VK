@@ -49,22 +49,6 @@ void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& p
     ubo.viewPos = viewPos;
     ubo.deltaT = deltaT;
     perFrameUBOs[currentFrame].transferData(&ubo, sizeof(ubo));
-    
-    /*VulkanUniformInfos::GlobalUBO gubo[4];
-    gubo[0].light = glm::vec3(1.f, 0.f, 0.f);
-    gubo[1].light = glm::vec3(0.5f, 0.5f, 0.f);
-    gubo[2].light = glm::vec3(0.f, 0.5f, 0.5f);
-    gubo[3].light = glm::vec3(0.f, 0.f, 1.f);
-    gubo[0].lightPos = glm::vec3(-10.f, 10.f, 10.f);
-    gubo[1].lightPos = glm::vec3(-10.f, -10.f, 10.f);
-    gubo[2].lightPos = glm::vec3(10.f, 10.f, 10.f);
-    gubo[3].lightPos = glm::vec3(10.f, -10.f, 10.f);
-
-    int s = sizeof(VulkanUniformInfos::GlobalUBO);
-    globalUBO[0].transferData(gubo, sizeof(VulkanUniformInfos::GlobalUBO));
-    globalUBO[1].transferData(gubo + 1, sizeof(VulkanUniformInfos::GlobalUBO));
-    globalUBO[2].transferData(gubo + 2, sizeof(VulkanUniformInfos::GlobalUBO));
-    globalUBO[3].transferData(gubo + 3, sizeof(VulkanUniformInfos::GlobalUBO));*/
 
     //imageIndex returned by vkAcquireNextImageKHR is only guranteed to be availble next, but it may not 
     //be available immediately, so a semaphore is needed to synchronize vkcommands that depend on the image.
@@ -193,7 +177,7 @@ void VulkanRenderer::submitDrawCalls() {
     //std::vector<VkSemaphore> waitSemaphores = {imageAvailableSemaphores[currentFrame] };
     //we cannot output color until image becomes availble
     std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submitInfo.waitSemaphoreCount = waitSemaphores.size();
+    submitInfo.waitSemaphoreCount = (uint32_t)waitSemaphores.size();
     submitInfo.pWaitSemaphores = waitSemaphores.data();
     submitInfo.pWaitDstStageMask = waitStages.data();
     submitInfo.commandBufferCount = 1;

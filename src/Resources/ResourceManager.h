@@ -21,8 +21,8 @@ class VulkanResourceManager;
 #include <list>
 #include <string>
 
-class Object;
-class Cloth;
+struct Object;
+struct Cloth;
 struct Material;
 
 #define MAX_NUM_BONE_PER_VERTEX 8

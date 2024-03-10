@@ -14,6 +14,7 @@
 //#define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 #include "GLM/gtx/transform.hpp"
+#include <spirv_glsl.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -66,11 +67,7 @@ int main(int argc, char* argv[]) {
 
     float deltaT = 0.f;
 	while (!glfwWindowShouldClose(window.window)) {
-    //for(int i = 0; i < 10; i++) {
-        //srand((unsigned int)time(nullptr));
-        //std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
-		glfwPollEvents();
+	    glfwPollEvents();
 
         glm::mat4 projView = proj * glm::lookAt(viewPos, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 
@@ -78,20 +75,16 @@ int main(int argc, char* argv[]) {
         renderer.compute(cloth, 0.0001);
         renderer.submitCompute();
 
-		renderer.beginDrawCalls(viewPos, projView, deltaT);
+	    renderer.beginDrawCalls(viewPos, projView, deltaT);
         /*for (Mesh& m: obj->meshList) {
 		    renderer.draw(obj->vkIndexBuffer.vkBuffer,  obj->vkVertexBuffers.vkBuffers.data(), 
-                          m.size, m.indexOffset, model, pbr.maps);
+                            m.size, m.indexOffset, model, pbr.maps);
         }*/
 
         renderer.drawPhong(cloth->vkIndexBuffer.vkBuffer, cloth->vkVertexBuffers.vkBuffers.data(),
-                    cloth->numIndices, 0, model);
+                           cloth->numIndices, 0, model);
 
-		renderer.submitDrawCalls();
-
-        //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        //deltaT = (float)(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0);
-        //std::cout << deltaT << std::endl;
+	    renderer.submitDrawCalls();
 	}
 	vkDeviceWaitIdle(vulkanContext.logicalDevice);
 

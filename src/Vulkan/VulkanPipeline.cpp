@@ -28,7 +28,7 @@ VulkanPipeline::VulkanPipeline(const std::string& comp, const VkPipelineCreateFl
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
+    pipelineLayoutInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 1; // Optional
     pipelineLayoutInfo.pPushConstantRanges = &pushConstant; // Optional

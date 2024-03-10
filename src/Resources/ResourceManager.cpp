@@ -280,9 +280,9 @@ Cloth* ResourceManager::createCloth(int width, int height, float restLength, flo
     }
 
     Cloth* cloth = new Cloth(restLength, particleMass, springK, damperK, {0.9f, 0.9f, 0.9f});
-    cloth->numDampers = springDampers.size();
-    cloth->numIndices = indexBuffer.triangles.size() * 3;
-    cloth->numPart = positions.size();
+    cloth->numDampers = (int)springDampers.size();
+    cloth->numIndices = (int)indexBuffer.triangles.size() * 3;
+    cloth->numPart = (int)positions.size();
 
     //springDamper SSBO
     cloth->springDamperSSBO = VulkanBufferUtils::createVulkanDataBuffer(springDampers.data(), springDampers.size() * sizeof(springDampers[0]),

@@ -49,14 +49,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_VULKAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM;$(solutionDir)src\Dependencies\spirv_cross\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)src\Dependencies\assimp\lib;$(SolutionDir)src\Dependencies\GLFW\lib-vc2019;C:\VulkanSDK\1.3.250.1\Lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);glfw3.lib;vulkan-1.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)src\Dependencies\assimp\lib;$(SolutionDir)src\Dependencies\GLFW\lib-vc2019;C:\VulkanSDK\1.3.250.1\Lib;$(SolutionDir)src\Dependencies\spirv_cross\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(CoreLibraryDependencies);glfw3.lib;vulkan-1.lib;assimp-vc143-mt.lib;spirv-cross-glsl.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -67,7 +67,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_VULKAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM;$(solutionDir)src\Dependencies\spirv_cross\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -75,11 +75,12 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);glfw3.lib;vulkan-1.lib;assimp-vc143-mt.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)src\Dependencies\assimp\lib;$(SolutionDir)src\Dependencies\GLFW\lib-vc2019;C:\VulkanSDK\1.3.250.1\Lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(CoreLibraryDependencies);glfw3.lib;vulkan-1.lib;assimp-vc143-mt.lib;spirv-cross-glsl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)src\Dependencies\assimp\lib;$(SolutionDir)src\Dependencies\GLFW\lib-vc2019;C:\VulkanSDK\1.3.250.1\Lib;$(SolutionDir)src\Dependencies\spirv_cross\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\App.cpp" />
     <ClCompile Include="src\Graphics\Bone.cpp" />
     <ClCompile Include="src\Graphics\Cloth.cpp" />
     <ClCompile Include="src\Graphics\Instance.cpp" />
@@ -87,12 +88,14 @@
     <ClCompile Include="src\Graphics\Node.cpp" />
     <ClCompile Include="src\Graphics\Object.cpp" />
     <ClCompile Include="src\Graphics\SkeletalAnimation.cpp" />
+    <ClCompile Include="src\IO\IO.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\Resources\ResourceManager.cpp" />
     <ClCompile Include="src\Graphics\Material.cpp" />
     <ClCompile Include="src\Graphics\Camera.cpp" />
     <ClCompile Include="src\tools\ColorID.cpp" />
     <ClCompile Include="src\tools\MathConverter.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanShader.cpp" />
     <ClCompile Include="src\Vulkan\VulkanBuffer.cpp" />
     <ClCompile Include="src\Vulkan\VulkanBufferUtils.cpp" />
     <ClCompile Include="src\Vulkan\VulkanCommandPool.cpp" />
@@ -109,8 +112,10 @@
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\App.h" />
     <ClInclude Include="src\Graphics\Bone.h" />
     <ClInclude Include="src\Graphics\Cloth.h" />
+    <ClInclude Include="src\IO\IO.h" />
     <ClInclude Include="src\Resources\Image.h" />
     <ClInclude Include="src\Graphics\Instance.h" />
     <ClInclude Include="src\Graphics\SkeletalAnimation.h" />
@@ -136,6 +141,7 @@
     <ClInclude Include="src\Vulkan\VulkanRenderer.h" />
     <ClInclude Include="src\Vulkan\VulkanRendererInfos.h" />
     <ClInclude Include="src\Vulkan\VulkanResourceManager.h" />
+    <ClInclude Include="src\Vulkan\VulkanShader.h" />
     <ClInclude Include="src\Vulkan\VulkanSwapchain.h" />
     <ClInclude Include="src\Vulkan\VulkanImage.h" />
     <ClInclude Include="src\Vulkan\VulkanUniformInfos.h" />

@@ -93,7 +93,7 @@ void VulkanContext::createInstance() {
         if (validationFeatures.size() > 0) {
             VkValidationFeaturesEXT features = {};
             features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-            features.enabledValidationFeatureCount = validationFeatures.size();
+            features.enabledValidationFeatureCount = (uint32_t)validationFeatures.size();
             features.pEnabledValidationFeatures = validationFeatures.data();
             createInfo.pNext = &features;
         }
