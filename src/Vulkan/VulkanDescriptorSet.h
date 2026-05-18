@@ -38,17 +38,6 @@ public:
     */
     void updateDescriptor(uint32_t binding, uint32_t index, VkDescriptorDataEXT descData);
 
-    /*
-    * @param descriptorSetLayoutSizes A reference returned vector of device memory sizes of the desciptor sets created.
-    * @param descriptorSetLayouts A vector of descriptor set layouts needed to create a corresponding array of descriptor sets.
-    * @param descriptorSetLayoutInfos Each descriptor sets binding infos, per descriptor set, per binding.
-    * @param context A pointer to the VulkanContext variable.
-    */
-    static void createDescriptorSetLayouts(std::vector<VkDeviceSize>& descriptorSetLayoutSizes,
-                                            std::vector<VkDescriptorSetLayout>& descriptorSetLayouts,
-                                            const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& descriptorSetLayoutInfos,
-                                            VulkanContext* context);
-
 private:
     VulkanContext* context;
 };

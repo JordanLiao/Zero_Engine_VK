@@ -28,7 +28,7 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
 
     resized = false;
     
-    vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
+    /*vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
                                             vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
     vkGetDescriptorEXT = reinterpret_cast<PFN_vkGetDescriptorEXT>(
                                             vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorEXT"));
@@ -37,14 +37,7 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(
                                             vkGetDeviceProcAddr(logicalDevice, "vkGetBufferDeviceAddressKHR"));
     vkGetDescriptorSetLayoutBindingOffsetEXT = reinterpret_cast<PFN_vkGetDescriptorSetLayoutBindingOffsetEXT>(
-                                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutBindingOffsetEXT"));
-
-    descBufferProps = new VkPhysicalDeviceDescriptorBufferPropertiesEXT{};
-    descBufferProps->sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
-    VkPhysicalDeviceProperties2 deviceProperties{};
-    deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-    deviceProperties.pNext = descBufferProps;
-    vkGetPhysicalDeviceProperties2KHR(physicalDevice, &deviceProperties);
+                                            vkGetDeviceProcAddr(logicalDevice, "vkGetDescriptorSetLayoutBindingOffsetEXT"));*/
 
     physicalDeviceProps = new VkPhysicalDeviceProperties{};
     vkGetPhysicalDeviceProperties(physicalDevice, physicalDeviceProps);
@@ -93,7 +86,7 @@ void VulkanContext::createInstance() {
         if (validationFeatures.size() > 0) {
             VkValidationFeaturesEXT features = {};
             features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-            features.enabledValidationFeatureCount = (uint32_t)validationFeatures.size();
+            features.enabledValidationFeatureCount = validationFeatures.size();
             features.pEnabledValidationFeatures = validationFeatures.data();
             createInfo.pNext = &features;
         }
@@ -178,10 +171,11 @@ void VulkanContext::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUt
     }
 }
 
+//Validation Layer message callback
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanContext::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
 
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+    std::cerr << pCallbackData->pMessage << "\n" << std::endl;
     return VK_FALSE;
 }
 
@@ -301,20 +295,24 @@ void VulkanContext::createLogicalDevice() {
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+    //For VMA
     VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddresFeatures{};
     bufferDeviceAddresFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
     bufferDeviceAddresFeatures.bufferDeviceAddress = VK_TRUE;
 
-    VkPhysicalDeviceDescriptorBufferFeaturesEXT descriptorBufferFeaturesEXT{};
-    descriptorBufferFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
-    descriptorBufferFeaturesEXT.descriptorBuffer = VK_TRUE;
-    descriptorBufferFeaturesEXT.descriptorBufferCaptureReplay = VK_TRUE;
-    descriptorBufferFeaturesEXT.pNext = &bufferDeviceAddresFeatures;
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+    descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.pNext = &bufferDeviceAddresFeatures;
 
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature{};
     dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     dynamicRenderingFeature.dynamicRendering = VK_TRUE;
-    dynamicRenderingFeature.pNext = &descriptorBufferFeaturesEXT;
+    dynamicRenderingFeature.pNext =&descriptorIndexingFeatures;
 
     createInfo.pNext = &dynamicRenderingFeature;
 

@@ -213,7 +213,7 @@ Object* ResourceManager::loadObject(const std::string& fPath) {
 	return obj;
 }
 
-Cloth* ResourceManager::createCloth(int width, int height, float restLength, float particleMass, float springK, float damperK) {
+/*Cloth* ResourceManager::createCloth(int width, int height, float restLength, float particleMass, float springK, float damperK) {
     std::vector<glm::vec4> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;
@@ -248,24 +248,6 @@ Cloth* ResourceManager::createCloth(int width, int height, float restLength, flo
                 springDampers.push_back({(i - 1)* width + j - 1, i* width + j, diagonalRestLength});
             if (i != 0 && j != width - 1) // diagonaldamper2
                 springDampers.push_back({(i - 1)* width + j + 1, i* width + j, diagonalRestLength});
-
-            /*if (j != 0) //horizontal dampers
-                springDampers.push_back({ glm::ivec2{ i* width + j - 1, i* width + j} });
-            if (i != 0) //vertical dampers
-                springDampers.push_back({ glm::ivec2{ (i - 1)* width + j, i* width + j} });
-            if (i != 0 && j != 0) // diagonaldamper1
-                springDampers.push_back({ glm::ivec2{ (i - 1)* width + j - 1, i* width + j} });
-            if (i != 0 && j != width - 1) // diagonaldamper2
-                springDampers.push_back({ glm::ivec2{ (i - 1)* width + j + 1, i* width + j} });*/
-
-            /*if (j != 0) //horizontal dampers
-                springDampers.push_back({i* width + j - 1, i* width + j});
-            if (i != 0) //vertical dampers
-                springDampers.push_back({ (i - 1) * width + j, i * width + j});
-            if (i != 0 && j != 0) // diagonaldamper1
-                springDampers.push_back({(i - 1)* width + j - 1, i* width + j});
-            if (i != 0 && j != width - 1) // diagonaldamper2
-                springDampers.push_back({(i - 1)* width + j + 1, i* width + j});*/
         }
     }
 
@@ -280,9 +262,9 @@ Cloth* ResourceManager::createCloth(int width, int height, float restLength, flo
     }
 
     Cloth* cloth = new Cloth(restLength, particleMass, springK, damperK, {0.9f, 0.9f, 0.9f});
-    cloth->numDampers = (int)springDampers.size();
-    cloth->numIndices = (int)indexBuffer.triangles.size() * 3;
-    cloth->numPart = (int)positions.size();
+    cloth->numDampers = springDampers.size();
+    cloth->numIndices = indexBuffer.triangles.size() * 3;
+    cloth->numPart = positions.size();
 
     //springDamper SSBO
     cloth->springDamperSSBO = VulkanBufferUtils::createVulkanDataBuffer(springDampers.data(), springDampers.size() * sizeof(springDampers[0]),
@@ -347,7 +329,7 @@ Cloth* ResourceManager::createCloth(int width, int height, float restLength, flo
     cloth->descSet.insertDescriptor(3, descData);
 
     return cloth;
-}
+}*/
 
 void ResourceManager::processMeshVertices(aiMesh* pMesh, VertexBuffer& buffer) {
 	aiVector3D Zero3D(0.0f, 0.0f, 0.0f);

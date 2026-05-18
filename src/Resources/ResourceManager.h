@@ -21,8 +21,8 @@ class VulkanResourceManager;
 #include <list>
 #include <string>
 
-struct Object;
-struct Cloth;
+class Object;
+class Cloth;
 struct Material;
 
 #define MAX_NUM_BONE_PER_VERTEX 8
@@ -79,7 +79,7 @@ public:
 	
 	static Object* loadObject(const std::string& fName);
 
-    static Cloth* createCloth(int width, int height, float restLength, float particleMass, float springK, float damperK);
+    //static Cloth* createCloth(int width, int height, float restLength, float particleMass, float springK, float damperK);
 
 	//extract the file name from the file path
 	static std::string getFileNameFromPath(const std::string& fPath);

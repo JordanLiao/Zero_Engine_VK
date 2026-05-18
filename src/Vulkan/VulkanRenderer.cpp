@@ -24,17 +24,9 @@ VulkanRenderer::VulkanRenderer(VulkanContext* context, VulkanResourceManager* rM
     computeCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                     context->queueFamilyIndices.computeFamily.value(), context->logicalDevice);
 
-    vkCmdBindDescriptorBuffersEXT = reinterpret_cast<PFN_vkCmdBindDescriptorBuffersEXT>(
-                            vkGetDeviceProcAddr(context->logicalDevice, "vkCmdBindDescriptorBuffersEXT"));
-    vkCmdSetDescriptorBufferOffsetsEXT = reinterpret_cast<PFN_vkCmdSetDescriptorBufferOffsetsEXT>(
-                            vkGetDeviceProcAddr(context->logicalDevice, "vkCmdSetDescriptorBufferOffsetsEXT"));
 
-    descAllocator = VulkanDescriptorAllocator(GLOBAL_DESCSET_ALLOCATOR_BUFFER_SIZE, VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT, context);
-
-    //sampler2D = VulkanImageUtils::createSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, context);
     createDepthMap();
     createUniformBuffers();
-    createDescriptorSets();
     createPipelines();
     createSyncObjects();
     createCommandBuffers();
@@ -102,9 +94,9 @@ void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& p
     renderingInfo.pStencilAttachment = VK_NULL_HANDLE;
 
     vkCmdBeginRendering(commandBuffers[currentFrame], &renderingInfo);
-    vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, simplePipeline.pipeline);
+    vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pbrPipeline.pipeline);
 
-    /***dynamic states************/
+    /***dynamic states********************************************/
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = (float)(swapchain.extent.height);
@@ -118,25 +110,28 @@ void VulkanRenderer::beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& p
     scissor.offset = { 0, 0 };
     scissor.extent = swapchain.extent;
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
-    /****************************/
+    /*************************************************************/
 
-    vkCmdBindDescriptorBuffersEXT(commandBuffers[currentFrame], VulkanDescriptorAllocator::numAllocators, 
-                                                                VulkanDescriptorAllocator::allocBindingInfos.data());
+    auto descriptorSet= rManager->getDescriptorSets();
 
-    uint32_t bufferIndices[VulkanRendererInfos::numDescRoles] = {2, 0, 1};
-    VkDeviceSize offsets[VulkanRendererInfos::numDescRoles] = {rManager->descSets[VulkanRendererInfos::globalUniform].setOffset,
-                                                               rManager->descSets[VulkanRendererInfos::texSampler].setOffset,
-                                                               perframeDescSet.setOffset};
-    vkCmdSetDescriptorBufferOffsetsEXT(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        simplePipeline.layout, 0, VulkanRendererInfos::numDescRoles, bufferIndices, offsets);
+    //bind descriptor sets here
+    vkCmdBindDescriptorSets(
+        commandBuffers[currentFrame],
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pbrPipeline.layout,
+        0,                  // firstSet: set = 0
+        1,                  // descriptorSetCount
+        &descriptorSet,
+        0,
+        nullptr
+    );
 }
 
 void VulkanRenderer::drawPBR(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, 
                           glm::mat4& model, glm::ivec4& pbrMat) {
     VulkanUniformInfos::PBRConstant pConst;
-    pConst.frameIndex = currentFrame;
-    pConst.model = model;
-    pConst.maps = pbrMat;
+    //TODO: populate pConst here
+
     vkCmdPushConstants(commandBuffers[currentFrame], pbrPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0, sizeof(VulkanUniformInfos::PBRConstant), &pConst);
 
@@ -173,11 +168,11 @@ void VulkanRenderer::submitDrawCalls() {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    std::vector<VkSemaphore> waitSemaphores = { computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame] };
-    //std::vector<VkSemaphore> waitSemaphores = {imageAvailableSemaphores[currentFrame] };
+    //std::vector<VkSemaphore> waitSemaphores = { computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame] };
+    std::vector<VkSemaphore> waitSemaphores = {imageAvailableSemaphores[currentFrame] };
     //we cannot output color until image becomes availble
-    std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submitInfo.waitSemaphoreCount = (uint32_t)waitSemaphores.size();
+    std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = waitSemaphores.size();
     submitInfo.pWaitSemaphores = waitSemaphores.data();
     submitInfo.pWaitDstStageMask = waitStages.data();
     submitInfo.commandBufferCount = 1;
@@ -213,7 +208,7 @@ void VulkanRenderer::submitDrawCalls() {
     currentFrame = (currentFrame + 1) % FRAMES_IN_FLIGHT;
 }
 
-void VulkanRenderer::beginCompute() {
+/*void VulkanRenderer::beginCompute() {
     vkWaitForFences(context->logicalDevice, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
     vkResetFences(context->logicalDevice, 1, &computeInFlightFences[currentFrame]);
 
@@ -278,7 +273,7 @@ void VulkanRenderer::submitCompute() {
     if (vkQueueSubmit(context->computeQueue, 1, &submitInfo, computeInFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit compute command buffer!");
     };
-}
+}*/
 
 
 void VulkanRenderer::createDepthMap() {
@@ -299,7 +294,7 @@ void VulkanRenderer::createUniformBuffers() {
     }
 }
 
-void VulkanRenderer::createDescriptorSets() {
+/*void VulkanRenderer::createDescriptorSets() {
     std::vector<std::vector<VulkanBuffer*>> bufferPtrs(2, std::vector<VulkanBuffer*>());
     bufferPtrs[0].reserve(FRAMES_IN_FLIGHT);
     for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
@@ -309,24 +304,25 @@ void VulkanRenderer::createDescriptorSets() {
     perframeDescSet = descAllocator.createDescriptorSet(bufferPtrs, 
                                                         VulkanRendererInfos::descriptorSetLayoutInfos[VulkanRendererInfos::perFrameUniform],
                                                         rManager->descriptorSetLayouts[VulkanRendererInfos::perFrameUniform]);
-}
+}*/
 
 void VulkanRenderer::createPipelines() {
-    simplePipeline = VulkanPipeline("./src/shaders/clothVert.spv", "./src/shaders/clothFrag.spv",
+    /*simplePipeline = VulkanPipeline("./src/shaders/clothVert.spv", "./src/shaders/clothFrag.spv",
                                         VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
                                         swapchain.extent, swapchain.format, depthFormat, sizeof(VulkanUniformInfos::PhongConstant),
-                                        rManager->descriptorSetLayouts, context);
-    /*pbrPipeline = VulkanPipeline("./src/shaders/pbr_vert.spv", "./src/shaders/pbr_frag.spv", 
+                                        rManager->getDescriptorSetLayouts(), context);*/
+    std::vector<VkDescriptorSetLayout> layouts = { rManager->getDescriptorSetLayouts() };
+    pbrPipeline = VulkanPipeline("./src/shaders/pbr_vert.spv", "./src/shaders/pbr_frag.spv", 
                                       VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, 
                                       swapchain.extent, swapchain.format, depthFormat, sizeof(VulkanUniformInfos::PBRConstant),
-                                      rManager->descriptorSetLayouts, context);*/
-    clothDamperPipeline = VulkanPipeline("./src/shaders/cloth_damper.spv",
+                                      layouts, context);
+    /*clothDamperPipeline = VulkanPipeline("./src/shaders/cloth_damper.spv",
                                         VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
                                         rManager->clothDescSetLayouts, context);
 
     clothParticlePipeline = VulkanPipeline("./src/shaders/cloth_particle.spv",
                                         VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
-                                        rManager->clothDescSetLayouts, context);
+                                        rManager->clothDescSetLayouts, context);*/
 }
 
 void VulkanRenderer::createSyncObjects() {
@@ -404,8 +400,6 @@ void VulkanRenderer::createCommandBuffers() {
 }
 
 void VulkanRenderer::cleanUp() {
-    descAllocator.cleanUp();
-
     for (VulkanBuffer& pfUbo : perFrameUBOs) {
         pfUbo.cleanUp();
     }

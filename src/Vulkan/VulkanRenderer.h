@@ -49,9 +49,9 @@ public:
     */
     void submitDrawCalls();
 
-    void beginCompute();
-    void compute(Cloth* cloth, float deltaTime);
-    void submitCompute();
+    //void beginCompute();
+    //void compute(Cloth* cloth, float deltaTime);
+    //void submitCompute();
 
     void cleanUp();
 
@@ -83,14 +83,14 @@ private:
     void createDepthMap();
     
 
-    PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
-    PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
+    //PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
+    //PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
 
     VulkanResourceManager* rManager;
 
-    VulkanDescriptorAllocator descAllocator;
-    VulkanDescriptorSet perframeDescSet;
-    void createDescriptorSets();
+    //VulkanDescriptorAllocator descAllocator;
+    //VulkanDescriptorSet perframeDescSet;
+    //void createDescriptorSets();
 
     //initial testing pipeline, there could be many different pipelines
     VulkanPipeline simplePipeline;

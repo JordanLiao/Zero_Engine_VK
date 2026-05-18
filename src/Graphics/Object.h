@@ -16,7 +16,8 @@
 struct Mesh;
 struct Material;
 
-struct Object{
+class Object{
+public:
 	std::string objFileName;
 	glm::mat4 model;
     std::vector<Mesh> meshList; //might want to use a different data structure for efficiency.

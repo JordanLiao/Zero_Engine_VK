@@ -12,20 +12,26 @@ layout(location = 2) out vec2 outTexCoord;
 layout(location = 3) out vec3 outTangent;
 layout(location = 4) out vec3 outBitangent;
 
-layout(set=0,binding = 0) uniform PerFrameUBO {
-    mat4 projView;
-    vec3 viewDir;
-} pfUBO[2];
+struct ObjData {
+	mat4 model;
+	ivec4 maps; //PBR material maps IDs
+};
+
+layout(set=0,binding = 1) readonly buffer ObjDataBuffers {dsfsdfsd
+	ObjData objData[];
+};
 
 layout(push_constant) uniform PushConstant {
-    uint frameIndex;
-    mat4 model;
-    ivec4 maps;
+    uint objIdx;
+    mat4 projView;
+	vec3 viewPos;
+	vec3 viewDir;
 } pConst;
 
 void main() {
-    mat4 model = mat4(1.f);
-    gl_Position = pfUBO[pConst.frameIndex].projView * vec4(inPosition, 1.0f);
+    mat4 model = objData[pConst.objIdx].model;
+
+    gl_Position = pConst.projView * vec4(inPosition, 1.0f);
     outPosition = vec3(model * vec4(inPosition, 1.0));
     outNormal = normalize(mat3(transpose(inverse(model))) * inNormal);
     outTexCoord = inTexCoord;

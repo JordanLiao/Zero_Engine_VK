@@ -16,10 +16,10 @@ namespace VulkanUniformInfos {
     };
 
     struct PBRConstant {
-        uint32_t frameIndex;
-        alignas(16)
-        glm::mat4 model;
-        glm::ivec4 maps;
+        uint32_t objIdx;
+        glm::mat4 projView;
+        glm::vec3 viewPos;
+        glm::vec3 viewDir;
     };
 
     struct PhongConstant {

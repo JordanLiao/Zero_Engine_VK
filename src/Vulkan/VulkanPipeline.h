@@ -15,8 +15,10 @@ public:
     VkPipelineLayout layout;
 
     VulkanPipeline();
+    //constructor for compute pipeline
     VulkanPipeline(const std::string& comp, const VkPipelineCreateFlags& flags,
                     std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VulkanContext* context);
+    //constructor for graphics pipeline
     VulkanPipeline(const std::string& vert, const std::string& frag, const VkPipelineCreateFlags& flags, 
                            VkExtent2D& extent, VkFormat& format, VkFormat& depthFormat, int pushConstSize,
                            std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VulkanContext* context);

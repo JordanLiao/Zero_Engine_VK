@@ -2,6 +2,8 @@
 #define _VULKANCONTEXT_H_
 
 #define VK_USE_PLATFORM_WIN32_KHR
+//#define GLFW_INCLUDE_VULKAN
+//#include "GLFW/glfw3.h"
 #include <vulkan/vulkan.h>
 #include "vk_mem_alloc.h"
 
@@ -23,8 +25,6 @@ struct GLFWwindow;
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
-    VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
     VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
     VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 };
@@ -60,8 +60,6 @@ public:
 
     VmaAllocator vmAlloc;
 
-    //properties for different types of descriptors.
-    VkPhysicalDeviceDescriptorBufferPropertiesEXT* descBufferProps;
     //properties of the physical device being used
     VkPhysicalDeviceProperties *physicalDeviceProps;
 

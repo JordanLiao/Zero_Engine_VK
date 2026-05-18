@@ -28,7 +28,7 @@ VulkanPipeline::VulkanPipeline(const std::string& comp, const VkPipelineCreateFl
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
+    pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 1; // Optional
     pipelineLayoutInfo.pPushConstantRanges = &pushConstant; // Optional
@@ -118,8 +118,7 @@ VulkanPipeline::VulkanPipeline(const std::string& vert, const std::string& frag,
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    //rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.cullMode = VK_CULL_MODE_NONE;
@@ -198,7 +197,7 @@ VulkanPipeline::VulkanPipeline(const std::string& vert, const std::string& frag,
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.flags = flags;
+    //pipelineInfo.flags = flags;
     pipelineInfo.pNext = &pipelineRenderingCreateInfo;
     pipelineInfo.stageCount = 2;
     pipelineInfo.pStages = shaderStages;
