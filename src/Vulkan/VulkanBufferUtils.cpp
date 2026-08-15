@@ -11,7 +11,7 @@
 uint32_t VulkanBufferUtils::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VulkanContext* context) {
 
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(context->physicalDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(context->getPhysicalDevice(), &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
@@ -114,5 +114,5 @@ VkDeviceAddress VulkanBufferUtils::getBufferDeviceAddress(VkBuffer buffer, Vulka
     VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
     bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     bufferDeviceAI.buffer = buffer;
-    return context->vkGetBufferDeviceAddressKHR(context->logicalDevice, &bufferDeviceAI);
+    return context->vkGetBufferDeviceAddressKHR(context->getLogicalDevice(), &bufferDeviceAI);
 }

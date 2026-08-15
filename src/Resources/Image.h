@@ -11,7 +11,7 @@ struct Image {
     uint32_t width, height, channels;
     std::optional<uint32_t> texId;
 
-    VulkanImage data;
+    VulkanImage vkImg;
 };
 
 #endif

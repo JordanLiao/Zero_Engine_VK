@@ -17,21 +17,28 @@ struct ObjData {
 	ivec4 maps; //PBR material maps IDs
 };
 
-layout(set=0,binding = 1) readonly buffer ObjDataBuffers {dsfsdfsd
+layout(set=0,binding = 1) readonly buffer ObjDataBuffers {
 	ObjData objData[];
 };
 
 layout(push_constant) uniform PushConstant {
     uint objIdx;
-    mat4 projView;
-	vec3 viewPos;
-	vec3 viewDir;
+	uint frameIdx;
 } pConst;
 
-void main() {
-    mat4 model = objData[pConst.objIdx].model;
+layout(set=0,binding = 0) uniform ubo {
+    mat4 projView;
+    vec3 viewPos;
+	vec3 viewDir;
+    float deltaT;
+} pfUBO[100];
 
-    gl_Position = pConst.projView * vec4(inPosition, 1.0f);
+void main() {
+    //mat4 model = objData[pConst.objIdx].model;
+	mat4 model = mat4(1.f);
+	mat4 projView = pfUBO[pConst.frameIdx].projView;
+
+    gl_Position = projView * vec4(inPosition, 1.0f);
     outPosition = vec3(model * vec4(inPosition, 1.0));
     outNormal = normalize(mat3(transpose(inverse(model))) * inNormal);
     outTexCoord = inTexCoord;

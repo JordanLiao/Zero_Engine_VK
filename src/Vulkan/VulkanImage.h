@@ -9,9 +9,21 @@
 class VulkanContext;
 
 struct VulkanImage {
-    VkImage vkImage;
-    VkDeviceMemory vkDeviceMemory;
-    VkImageView vkImageView;
+    VkImage vkImage = VK_NULL_HANDLE;
+    VkDeviceMemory vkDeviceMemory = VK_NULL_HANDLE;
+    VkImageView vkImageView = VK_NULL_HANDLE;
+
+    VulkanImage();
+    VulkanImage(VkDevice);
+
+    VulkanImage(VulkanImage&& img) noexcept;
+    VulkanImage& operator=(VulkanImage&& img) noexcept;
+
+    void cleanup();
+    ~VulkanImage();
+
+private:
+    VkDevice logicalDevice = VK_NULL_HANDLE;
 };
 
 namespace VulkanImageUtils {
@@ -19,8 +31,8 @@ namespace VulkanImageUtils {
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkImageLayout oldLayout,
                             VkImageLayout newLayout, const VulkanCommandPool& commandPool);
 
-    void createImage2D(VulkanImage& image, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, 
-                       VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context);
+    VulkanImage createImage2D(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+                              VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context);
 
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkDevice logicalDevice);
 

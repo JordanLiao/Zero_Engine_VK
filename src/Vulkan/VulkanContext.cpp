@@ -13,6 +13,60 @@
 #include <array>
 #include <iostream>
 
+VkDevice VulkanContext::getLogicalDevice() {
+    return logicalDevice;
+}
+
+VkPhysicalDevice VulkanContext::getPhysicalDevice() {
+    return physicalDevice;
+}
+
+VkInstance VulkanContext::getInstance()
+{
+    return instance;
+}
+
+VkSurfaceKHR VulkanContext::getSurface() {
+    return surface;
+}
+
+VkQueue VulkanContext::getGraphicsQueue() {
+    return graphicsQueue;
+}
+
+VkQueue VulkanContext::getPresentQueue() {
+    return presentQueue;
+}
+
+VkQueue VulkanContext::getTransferQueue() {
+    return transferQueue;
+}
+
+VkQueue VulkanContext::getComputeQueue()
+{
+    return computeQueue;
+}
+
+VulkanCommon::QueueFamilyIndices VulkanContext::getQueueFamilyIndices() {
+    return queueFamilyIndices;
+}
+
+GLFWwindow* VulkanContext::getWindow() {
+    return window;
+}
+
+bool VulkanContext::getWindowResized() {
+    return windowResized;
+}
+
+void VulkanContext::setWindowResized(bool resized) {
+    windowResized = resized;
+}
+
+VmaAllocator VulkanContext::getVMAAlloc() {
+    return vmAlloc;
+}
+
 VulkanContext::VulkanContext() {}
 
 VulkanContext::VulkanContext(GLFWwindow* window) {
@@ -26,7 +80,7 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     initVMA();
     setupDebugMessenger();
 
-    resized = false;
+    windowResized = false;
     
     /*vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
                                             vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
@@ -310,7 +364,7 @@ void VulkanContext::createLogicalDevice() {
     descriptorIndexingFeatures.pNext = &bufferDeviceAddresFeatures;
 
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature{};
-    dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+    dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
     dynamicRenderingFeature.dynamicRendering = VK_TRUE;
     dynamicRenderingFeature.pNext =&descriptorIndexingFeatures;
 
@@ -330,7 +384,7 @@ void VulkanContext::createLogicalDevice() {
     vkGetDeviceQueue(logicalDevice, queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
 }
 
-void VulkanContext::cleanUp() {
+VulkanContext::~VulkanContext() {
     if (ENABLE_VALIDATION_LAYER) {
         DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
     }

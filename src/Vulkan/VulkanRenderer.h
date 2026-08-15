@@ -5,13 +5,9 @@
 #include "VulkanCommandPool.h"
 #include "VulkanPipeline.h"
 #include "VulkanBuffer.h"
-#include "VulkanDescriptorAllocator.h"
 #include "VulkanUniformInfos.h"
-#include "VulkanDescriptorSet.h"
 #include "VulkanRendererInfos.h"
 #include "../Resources/Image.h"
-
-#include "../Graphics/Cloth.h"
 
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLM/glm.hpp"
@@ -27,15 +23,20 @@ public:
     VulkanRenderer();
     VulkanRenderer(VulkanContext* context, VulkanResourceManager* rManager);
 
+    ~VulkanRenderer();
+
     std::vector<VulkanBuffer> globalUBO;
 
     /**
-	*   Resets commandBuffers[currentFrame], and make ready the renderer to record draw commands.
-    *   @param projView The projection view matrix used for drawing frame of index currentFrame.
+	*   Sync with previous frame, and reset and begin new command buffer
     */
-    void beginDrawCalls(const glm::vec3& viewPos, const glm::mat4& projView, float deltaT);
+    void beginRendering(const glm::vec3& viewPos, const glm::vec3& viewDir, const glm::mat4& projView, float deltaT);
+
+    void beginDrawCalls();
+    void submitDrawCalls();
 
     /**
+    * Draw with PBR, should stay between begin and submit draw calls functions;
     * @param indexBuffer VkBuffer handle to the indexBuffer.
     * @param vertexBuffers A pointer to the Vkbuffer array.
     * @param numIndices The number of indices to draw.
@@ -44,16 +45,13 @@ public:
     void drawPBR(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, glm::mat4& model, glm::ivec4& pbrMat);
     void drawPhong(VkBuffer indexBuffer, VkBuffer* vertexBuffers, uint32_t numIndices, uint32_t indexOffset, glm::mat4& model);
 	
-    /*
-	    submits currentFrame's commandBuffer
-    */
-    void submitDrawCalls();
 
-    //void beginCompute();
-    //void compute(Cloth* cloth, float deltaTime);
-    //void submitCompute();
+    VkCommandBuffer getDrawCmdBuf() const;
 
     void cleanUp();
+
+    VkFormat getSwapChainColorFormat() const;
+    VkFormat getDepthFormat() const;
 
 private:
     VulkanContext* context;
@@ -62,14 +60,14 @@ private:
     VulkanSwapchain swapchain;
     void recreateSwapchain();
 
-    VulkanCommandPool graphicsCmdPool, transferCmdPool, computeCmdPool;
-    std::vector<VkCommandBuffer> commandBuffers; //one commandBuffer per frame in flight
+    VulkanCommandPool graphicsCmdPool, transferCmdPool;// computeCmdPool;
+    std::vector<VkCommandBuffer> graphicsCmdBuffers; //one commandBuffer per frame in flight
     std::vector<VkCommandBuffer> computeCmdBuffers;
     void createCommandBuffers();
 
     uint32_t currentFrame = 0;
-    std::vector<VkSemaphore> computeFinishedSemaphores;
-    std::vector<VkFence> computeInFlightFences;
+    //std::vector<VkFence> computeInFlightFences;
+    //std::vector<VkSemaphore> computeFinishedSemaphores;
     std::vector<VkSemaphore> imageAvailableSemaphores; //whether an image is available to render to.
     std::vector<VkSemaphore> renderFinishedSemaphores; //whether an image has finished rendering.
     std::vector<VkFence> inFlightFences; //whether cmds for the currentFrame have finished.
@@ -82,21 +80,15 @@ private:
     VkFormat depthFormat;
     void createDepthMap();
     
-
     //PFN_vkCmdBindDescriptorBuffersEXT vkCmdBindDescriptorBuffersEXT = VK_NULL_HANDLE;
     //PFN_vkCmdSetDescriptorBufferOffsetsEXT vkCmdSetDescriptorBufferOffsetsEXT = VK_NULL_HANDLE;
 
-    VulkanResourceManager* rManager;
-
-    //VulkanDescriptorAllocator descAllocator;
-    //VulkanDescriptorSet perframeDescSet;
-    //void createDescriptorSets();
+    VulkanResourceManager* vkRourceManager;
 
     //initial testing pipeline, there could be many different pipelines
     VulkanPipeline simplePipeline;
     VulkanPipeline pbrPipeline;
-    VulkanPipeline clothDamperPipeline;
-    VulkanPipeline clothParticlePipeline;
+
     void createPipelines();
 };
 

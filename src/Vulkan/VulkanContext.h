@@ -6,6 +6,7 @@
 //#include "GLFW/glfw3.h"
 #include <vulkan/vulkan.h>
 #include "vk_mem_alloc.h"
+#include "GLM/glm.hpp"
 
 #include "VulkanCommon.h"
 
@@ -39,26 +40,27 @@ const std::vector<const char*> validationLayers = {
 };
 
 const std::vector<VkValidationFeatureEnableEXT> validationFeatures = {
-    VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
+    //VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
 };
 
 class VulkanContext {
 public:
-    VkInstance instance;
-    VkSurfaceKHR surface;
-    VkPhysicalDevice physicalDevice;
-    VkDevice logicalDevice;
+    VkDevice getLogicalDevice();
+    VkPhysicalDevice getPhysicalDevice();
+    VkInstance getInstance();
+    VkSurfaceKHR getSurface();
 
-    VkQueue graphicsQueue;
-    VkQueue presentQueue;
-    VkQueue transferQueue;
-    VkQueue computeQueue;
-    VulkanCommon::QueueFamilyIndices queueFamilyIndices;
+    VkQueue getGraphicsQueue();
+    VkQueue getPresentQueue();
+    VkQueue getTransferQueue();
+    VkQueue getComputeQueue();
+    VulkanCommon::QueueFamilyIndices getQueueFamilyIndices();
 
-    bool resized; //whether window has resized or not
-    GLFWwindow* window;
+    GLFWwindow* getWindow();
+    bool getWindowResized();
+    void setWindowResized(bool);
 
-    VmaAllocator vmAlloc;
+    VmaAllocator getVMAAlloc();
 
     //properties of the physical device being used
     VkPhysicalDeviceProperties *physicalDeviceProps;
@@ -71,7 +73,7 @@ public:
 
     VulkanContext();
     VulkanContext(GLFWwindow* window);
-    void cleanUp();
+    ~VulkanContext();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -80,7 +82,23 @@ public:
         void* pUserData);
 
 private:
+    VkQueue graphicsQueue = VK_NULL_HANDLE;
+    VkQueue presentQueue = VK_NULL_HANDLE;
+    VkQueue transferQueue = VK_NULL_HANDLE;
+    VkQueue computeQueue = VK_NULL_HANDLE ;
+    VulkanCommon::QueueFamilyIndices queueFamilyIndices;
+
+    VkInstance instance = VK_NULL_HANDLE;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice logicalDevice = VK_NULL_HANDLE;
+
+    bool windowResized; //whether window has resized or not
+    GLFWwindow* window = nullptr;
+
     void createInstance();
+
+    VmaAllocator vmAlloc = nullptr;
     void initVMA();
 	
     VkDebugUtilsMessengerEXT debugMessenger;

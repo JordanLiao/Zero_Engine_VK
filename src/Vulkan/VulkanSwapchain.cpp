@@ -12,13 +12,13 @@ VulkanSwapchain::VulkanSwapchain() {
     context = nullptr;
 }
 
-VulkanSwapchain::VulkanSwapchain(VulkanContext* context) {
+VulkanSwapchain::VulkanSwapchain(VulkanContext* context, VkSwapchainKHR old) {
     this->context = context;
 
-    SwapchainSupportDetails support = querySwapchainSupport(context->surface, context->physicalDevice);
+    SwapchainSupportDetails support = querySwapchainSupport(context->getSurface(), context->getPhysicalDevice());
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(support.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(support.presentModes);
-    VkExtent2D extent = chooseSwapExtent(context->window, support.capabilities);
+    VkExtent2D extent = chooseSwapExtent(context->getWindow(), support.capabilities);
 
     //stored for later
     this->extent = extent;
@@ -33,7 +33,7 @@ VulkanSwapchain::VulkanSwapchain(VulkanContext* context) {
       
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = context->surface;
+    createInfo.surface = context->getSurface();
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -41,8 +41,8 @@ VulkanSwapchain::VulkanSwapchain(VulkanContext* context) {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    uint32_t queueFamilyIndices[] = { context->queueFamilyIndices.graphicsFamily.value(), 
-                                      context->queueFamilyIndices.presentFamily.value() };
+    uint32_t queueFamilyIndices[] = { context->getQueueFamilyIndices().graphicsFamily.value(),
+                                      context->getQueueFamilyIndices().presentFamily.value()};
     if (queueFamilyIndices[0] != queueFamilyIndices[1]) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = 2;
@@ -57,18 +57,18 @@ VulkanSwapchain::VulkanSwapchain(VulkanContext* context) {
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; //ignore alpha
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
-    if (vkCreateSwapchainKHR(context->logicalDevice, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
+    createInfo.oldSwapchain = old;
+    if (vkCreateSwapchainKHR(context->getLogicalDevice(), &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(context->getLogicalDevice(), swapchain, &imageCount, nullptr);
     images.resize(imageCount);
-    vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, images.data());
+    vkGetSwapchainImagesKHR(context->getLogicalDevice(), swapchain, &imageCount, images.data());
 
     imageViews.resize(images.size());
     for (uint32_t i = 0; i < images.size(); i++) {
-        imageViews[i] = VulkanImageUtils::createImageView(images[i], format, VK_IMAGE_ASPECT_COLOR_BIT, context->logicalDevice);
+        imageViews[i] = VulkanImageUtils::createImageView(images[i], format, VK_IMAGE_ASPECT_COLOR_BIT, context->getLogicalDevice());
     }
 }
 
@@ -137,10 +137,78 @@ SwapchainSupportDetails VulkanSwapchain::querySwapchainSupport(VkSurfaceKHR surf
     return swapchainSupport;
 }
 
-void VulkanSwapchain::cleanUp() {
-    for (size_t i = 0; i < imageViews.size(); i++)
-        vkDestroyImageView(context->logicalDevice, imageViews[i], nullptr);
+VulkanSwapchain::VulkanSwapchain(VulkanSwapchain&& other) noexcept{
+    this->context = other.context;
+    this->imageViews.resize(other.imageViews.size());
+    for (auto i = 0; i < other.imageViews.size(); ++i) {
+        this->imageViews[i] = other.imageViews[i];
+        other.imageViews[i] = VK_NULL_HANDLE;
+    }
 
-    if(swapchain != VK_NULL_HANDLE)
-        vkDestroySwapchainKHR(context->logicalDevice, swapchain, nullptr);
+    this->swapchain = other.swapchain;
+    other.swapchain = VK_NULL_HANDLE;
+
+    this->imageCount = other.imageCount;
+    other.imageCount = 0;
+    this->format = other.format;
+    this->extent = other.extent;
+
+    this->images.resize(other.images.size());
+    for (auto i = 0; i < other.images.size(); ++i) {
+        this->images[i] = other.images[i];
+        other.images[i] = VK_NULL_HANDLE;
+    }
+}
+
+VulkanSwapchain& VulkanSwapchain::operator=(VulkanSwapchain&& other) noexcept {
+    cleanup();
+
+    if (this != &other) {
+        this->context = other.context;
+        this->imageViews.resize(other.imageViews.size());
+        for (auto i = 0; i < other.imageViews.size(); ++i) {
+            this->imageViews[i] = other.imageViews[i];
+            other.imageViews[i] = VK_NULL_HANDLE;
+        }
+
+        this->swapchain = other.swapchain;
+        other.swapchain = VK_NULL_HANDLE;
+
+        this->imageCount = other.imageCount;
+        other.imageCount = 0;
+        this->format = other.format;
+        this->extent = other.extent;
+
+        this->images.resize(other.images.size());
+        for (auto i = 0; i < other.images.size(); ++i) {
+            this->images[i] = other.images[i];
+            other.images[i] = VK_NULL_HANDLE;
+        }
+    }
+    return *this;
+}
+
+VulkanSwapchain::~VulkanSwapchain() {
+    cleanup();
+}
+
+VulkanSwapchain VulkanSwapchain::recreateSwapchain(VulkanContext* context, VulkanSwapchain& old) {
+    return VulkanSwapchain(context, old.getSwapchain());
+}
+
+VkSwapchainKHR VulkanSwapchain::getSwapchain() const {
+    return swapchain;
+}
+
+void VulkanSwapchain::cleanup() {
+    if (!context)
+        return;
+
+    for (size_t i = 0; i < imageViews.size(); i++) {
+        vkDestroyImageView(context->getLogicalDevice(), imageViews[i], nullptr);
+        imageViews[i] = VK_NULL_HANDLE;
+    }
+
+    vkDestroySwapchainKHR(context->getLogicalDevice(), swapchain, nullptr);
+    swapchain = VK_NULL_HANDLE;
 }

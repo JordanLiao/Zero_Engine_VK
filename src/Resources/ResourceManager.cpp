@@ -8,7 +8,6 @@
 #include "Object.h"
 #include "Mesh.h"
 #include "Material.h"
-#include "Cloth.h"
 #include "../tools/MathConverter.h"
 
 #include <iostream>
@@ -37,11 +36,11 @@ void ResourceManager::init(VulkanContext* context, VulkanResourceManager* rManag
     vulkanContext = context;
     vulkanResourceManager = rManager;
     vulkanTransferCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                                                  vulkanContext->queueFamilyIndices.transferFamily.value(),
-                                                  vulkanContext->logicalDevice);
+                                                  vulkanContext->getQueueFamilyIndices().transferFamily.value(),
+                                                  vulkanContext->getLogicalDevice());
     vulkanGraphicsCmdPool = VulkanCommandPool(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                                                vulkanContext->queueFamilyIndices.graphicsFamily.value(),
-                                                vulkanContext->logicalDevice);
+                                                vulkanContext->getQueueFamilyIndices().graphicsFamily.value(),
+                                                vulkanContext->getLogicalDevice());
     sampler2D = VulkanImageUtils::createSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, context);
 
     initialized = true;
@@ -50,6 +49,7 @@ void ResourceManager::init(VulkanContext* context, VulkanResourceManager* rManag
 void ResourceManager::cleanup() {
     vulkanTransferCmdPool.cleanUp();
     vulkanGraphicsCmdPool.cleanUp();
+    vkDestroySampler(vulkanContext->getLogicalDevice(), sampler2D, nullptr);
     initialized = false;
 }
 
@@ -93,7 +93,7 @@ Image ResourceManager::loadImage(const std::string& path, Formats::ImageFormat f
         throw std::runtime_error("failed to load texture image!");
     }
 
-    VulkanImageUtils::createImage2D(image.data, image.width, image.height, imgFormat, VK_IMAGE_TILING_OPTIMAL, 
+    image.vkImg = VulkanImageUtils::createImage2D(image.width, image.height, imgFormat, VK_IMAGE_TILING_OPTIMAL, 
                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vulkanContext);
 
@@ -104,12 +104,12 @@ Image ResourceManager::loadImage(const std::string& path, Formats::ImageFormat f
     stagingBuffer.transferData(pixels, (size_t)imageSize);
     stagingBuffer.unmap();
 
-    VulkanImageUtils::copyBufferToImage(stagingBuffer.vkBuffer, image.data.vkImage, image.width, image.height, 
+    VulkanImageUtils::copyBufferToImage(stagingBuffer.vkBuffer, image.vkImg.vkImage, image.width, image.height,
                             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanGraphicsCmdPool);
 
     VkDescriptorImageInfo imageInfo{};
     imageInfo.sampler = sampler2D;
-    imageInfo.imageView = image.data.vkImageView;
+    imageInfo.imageView = image.vkImg.vkImageView;
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     image.texId = vulkanResourceManager->addTexture2D(imageInfo);
 
@@ -333,9 +333,9 @@ Object* ResourceManager::loadObject(const std::string& fPath) {
 
 void ResourceManager::processMeshVertices(aiMesh* pMesh, VertexBuffer& buffer) {
 	aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
-    buffer.positions.resize(buffer.positions.size() + pMesh->mNumVertices);
-    buffer.normals.resize(buffer.normals.size() + pMesh->mNumVertices);
-    buffer.texCoords.resize(buffer.texCoords.size() + pMesh->mNumVertices);
+    buffer.positions.reserve(buffer.positions.size() + pMesh->mNumVertices);
+    buffer.normals.reserve(buffer.normals.size() + pMesh->mNumVertices);
+    buffer.texCoords.reserve(buffer.texCoords.size() + pMesh->mNumVertices);
 	for (unsigned int j = 0; j < pMesh->mNumVertices; j++) {
 		buffer.positions.push_back(glm::vec3(pMesh->mVertices[j].x, pMesh->mVertices[j].y, pMesh->mVertices[j].z));
 		buffer.normals.push_back(glm::vec3(pMesh->mNormals[j].x, pMesh->mNormals[j].y, pMesh->mNormals[j].z));

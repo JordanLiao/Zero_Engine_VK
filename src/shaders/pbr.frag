@@ -1,5 +1,4 @@
 #version 450
-#extension GL_KHR_vulkan_glsl : enable
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
@@ -9,16 +8,12 @@ layout(location = 4) in vec3 inBitangent;
 
 layout(location = 0) out vec4 outColor;
 
-/*layout(set=0,binding = 0) uniform ubo {
+layout(set=0,binding = 0) uniform ubo {
     mat4 projView;
     vec3 viewPos;
-} pfUBO[2];
-
-layout(set=0,binding = 1) uniform GlobalUBO {
-    vec3 lightPosition;
-    vec3 light;
-} gUBO[4];
-*/
+	vec3 viewDir;
+    float deltaT;
+} pfUBO[100];
 
 struct ObjData {
 	mat4 model;
@@ -33,9 +28,7 @@ layout(set=0, binding = 2) uniform sampler2D tex[1000];
 
 layout(push_constant) uniform PushConstant {
     uint objIdx;
-    mat4 projView;
-	vec3 viewPos;
-	vec3 viewDir;
+	uint frameIdx;
 } pConst;
 
 const float PI = 3.14159265359;
@@ -48,13 +41,15 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
 
 void main(){		
-	ivec4 maps = objData[pConst.objIdx].maps;
+	/*ivec4 maps = objData[pConst.objIdx].maps;
     vec3 albedo = pow(texture(tex[maps[0]], inTexCoord).rgb, vec3(2.2));
     float roughness = texture(tex[maps[2]], inTexCoord).r;
     float metallic = texture(tex[maps[3]], inTexCoord).r;
 
+	vec3 viewPos = pfUBO[pConst.frameIdx].viewPos;
+
     vec3 N = normalize(inNormal);
-    vec3 V = normalize(pConst.viewPos - inPosition);
+    vec3 V = normalize(viewPos - inPosition);
 
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
@@ -92,9 +87,9 @@ void main(){
     vec3 color = ambient + Lo;
     
     color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2));  
+    color = pow(color, vec3(1.0/2.2));  */
    
-    outColor = vec4(color, 1.0);
+    //outColor = vec4(color, 1.0);
     outColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 

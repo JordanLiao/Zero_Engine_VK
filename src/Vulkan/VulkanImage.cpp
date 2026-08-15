@@ -37,8 +37,10 @@ void VulkanImageUtils::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_
     VulkanCommandUtils::endSingleTimeCommands(commandBuffer, commandPool);
 }
 
-void VulkanImageUtils::createImage2D(VulkanImage& image, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-                                     VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context) {
+VulkanImage VulkanImageUtils::createImage2D(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+                                            VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VulkanContext* context) {
+    VulkanImage image(context->getLogicalDevice());
+
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -54,23 +56,23 @@ void VulkanImageUtils::createImage2D(VulkanImage& image, uint32_t width, uint32_
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(context->logicalDevice, &imageInfo, nullptr, &image.vkImage) != VK_SUCCESS) {
+    if (vkCreateImage(context->getLogicalDevice(), &imageInfo, nullptr, &image.vkImage) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(context->logicalDevice, image.vkImage, &memRequirements);
+    vkGetImageMemoryRequirements(context->getLogicalDevice(), image.vkImage, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = VulkanBufferUtils::findMemoryType(memRequirements.memoryTypeBits, properties, context);
 
-    if (vkAllocateMemory(context->logicalDevice, &allocInfo, nullptr, &image.vkDeviceMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(context->getLogicalDevice(), &allocInfo, nullptr, &image.vkDeviceMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
     }
 
-    vkBindImageMemory(context->logicalDevice, image.vkImage, image.vkDeviceMemory, 0);
+    vkBindImageMemory(context->getLogicalDevice(), image.vkImage, image.vkDeviceMemory, 0);
 
     VkImageAspectFlags aspectFlags;
     if (format >= VK_FORMAT_D16_UNORM && format <= VK_FORMAT_D32_SFLOAT_S8_UINT)
@@ -78,7 +80,8 @@ void VulkanImageUtils::createImage2D(VulkanImage& image, uint32_t width, uint32_
     else
         aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    image.vkImageView = createImageView(image.vkImage, format, aspectFlags, context->logicalDevice);
+    image.vkImageView = createImageView(image.vkImage, format, aspectFlags, context->getLogicalDevice());
+    return image;
 }
 
 VkImageView VulkanImageUtils::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, 
@@ -218,9 +221,66 @@ VkSampler VulkanImageUtils::createSampler(VkFilter filter, VkSamplerAddressMode 
     samplerInfo.maxLod = 0.0f;
 
     VkSampler sampler;
-    if (vkCreateSampler(context->logicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+    if (vkCreateSampler(context->getLogicalDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture sampler!");
     }
     
     return sampler;
+}
+
+VulkanImage::VulkanImage(){}
+
+VulkanImage::VulkanImage(VkDevice device) {
+    logicalDevice = device;
+}
+
+VulkanImage::VulkanImage(VulkanImage&& other) noexcept {
+    logicalDevice = other.logicalDevice;
+
+    // Steal other's resource
+    vkImage = other.vkImage;
+    vkDeviceMemory = other.vkDeviceMemory;
+    vkImageView = other.vkImageView;
+
+    // Leave other in a valid empty state
+    other.vkImage = VK_NULL_HANDLE;
+    other.vkDeviceMemory = VK_NULL_HANDLE;
+    other.vkImageView = VK_NULL_HANDLE;
+}
+
+VulkanImage& VulkanImage::operator=(VulkanImage&& other) noexcept {
+    logicalDevice = other.logicalDevice;
+    if (this != &other)
+    {
+        // Free our current resource
+        cleanup();
+
+        // Steal other's resource
+        vkImage = other.vkImage;
+        vkDeviceMemory = other.vkDeviceMemory;
+        vkImageView = other.vkImageView;
+
+        // Leave other in a valid empty state
+        other.vkImage = VK_NULL_HANDLE;
+        other.vkDeviceMemory = VK_NULL_HANDLE;
+        other.vkImageView = VK_NULL_HANDLE;
+    }
+
+    return *this;
+}
+
+void VulkanImage::cleanup() {
+    if (!logicalDevice)
+        return;
+
+    vkDestroyImageView(logicalDevice, vkImageView, nullptr);
+    vkImageView = VK_NULL_HANDLE;
+    vkDestroyImage(logicalDevice, vkImage, nullptr);
+    vkImage = VK_NULL_HANDLE;
+    vkFreeMemory(logicalDevice, vkDeviceMemory, nullptr);
+    vkDeviceMemory = VK_NULL_HANDLE;
+}
+
+VulkanImage::~VulkanImage() {
+    cleanup();
 }

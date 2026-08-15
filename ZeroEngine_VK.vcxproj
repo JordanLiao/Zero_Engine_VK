@@ -43,13 +43,19 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_VULKAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM;$(solutionDir)src/tools</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -67,7 +73,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_VULKAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.250.1\Include;$(solutionDir)src\Dependencies\GLFW\include;$(solutionDir)src\Dependencies\Assimp\include;$(solutionDir)src\Dependencies\stb_image;$(solutionDir)src\Vulkan;$(solutionDir)src\Graphics;$(solutionDir)src\SceneItems;$(solutionDir)src\Dependencies\VMA\include;$(solutionDir)src\Dependencies\GLM;$(solutionDir)src/tools</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -91,6 +97,13 @@
     <ClCompile Include="src\Graphics\Material.cpp" />
     <ClCompile Include="src\Graphics\Camera.cpp" />
     <ClCompile Include="src\tools\ColorID.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui_demo.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\tools\Imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\tools\MathConverter.cpp" />
     <ClCompile Include="src\Vulkan\VulkanBuffer.cpp" />
     <ClCompile Include="src\Vulkan\VulkanBufferUtils.cpp" />
@@ -119,6 +132,14 @@
     <ClInclude Include="src\Graphics\Material.h" />
     <ClInclude Include="src\Graphics\Camera.h" />
     <ClInclude Include="src\tools\ColorID.h" />
+    <ClInclude Include="src\tools\Imgui\imconfig.h" />
+    <ClInclude Include="src\tools\Imgui\imgui.h" />
+    <ClInclude Include="src\tools\Imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="src\tools\Imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="src\tools\Imgui\imgui_internal.h" />
+    <ClInclude Include="src\tools\Imgui\imstb_rectpack.h" />
+    <ClInclude Include="src\tools\Imgui\imstb_textedit.h" />
+    <ClInclude Include="src\tools\Imgui\imstb_truetype.h" />
     <ClInclude Include="src\tools\MathConverter.h" />
     <ClInclude Include="src\Vulkan\VulkanBuffer.h" />
     <ClInclude Include="src\Vulkan\VulkanBufferUtils.h" />

@@ -28,7 +28,7 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usageFlags, VkM
     allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
     allocInfo.requiredFlags = properties;
 
-    vmaCreateBuffer(context->vmAlloc, &bufferInfo, &allocInfo, &vkBuffer, &allocation, nullptr);
+    vmaCreateBuffer(context->getVMAAlloc(), &bufferInfo, &allocInfo, &vkBuffer, &allocation, nullptr);
     bufferCount++;
 }
 
@@ -50,7 +50,7 @@ VulkanBuffer::VulkanBuffer(VkDeviceSize size, VkBufferCreateFlags createFlags, V
     allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
     allocInfo.requiredFlags = properties;
 
-    vmaCreateBuffer(context->vmAlloc, &bufferInfo, &allocInfo, &vkBuffer, &allocation, nullptr);
+    vmaCreateBuffer(context->getVMAAlloc(), &bufferInfo, &allocInfo, &vkBuffer, &allocation, nullptr);
     bufferCount++;
 }
 
@@ -58,7 +58,7 @@ VkResult VulkanBuffer::map() {
     if (mapped)
         return VK_SUCCESS;
 
-    VkResult res = vmaMapMemory(context->vmAlloc, allocation, &data);
+    VkResult res = vmaMapMemory(context->getVMAAlloc(), allocation, &data);
     if (res == VK_SUCCESS)
         mapped = true;
 
@@ -69,7 +69,7 @@ void  VulkanBuffer::unmap(){
     if (!mapped)
         return;
 
-    vmaUnmapMemory(context->vmAlloc, allocation);
+    vmaUnmapMemory(context->getVMAAlloc(), allocation);
     mapped = false;
 }
 
@@ -81,7 +81,7 @@ void VulkanBuffer::transferData(const void* src, size_t size) {
 
 void VulkanBuffer::cleanUp() {
     unmap();
-    vmaDestroyBuffer(context->vmAlloc, vkBuffer, allocation);
+    vmaDestroyBuffer(context->getVMAAlloc(), vkBuffer, allocation);
     bufferCount--;
 }
 

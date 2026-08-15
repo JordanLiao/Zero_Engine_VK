@@ -5,9 +5,10 @@
 
 namespace VulkanUniformInfos {
     struct PerFrameUBO {
-        glm::mat4 projView;
-        glm::vec3 viewPos;
-        alignas(16) float deltaT;
+        alignas(16) glm::mat4 projView;
+        alignas(16) glm::vec3 viewPos;
+        alignas(16) glm::vec3 viewDir;
+        float deltaT;
     };
 
     struct GlobalUBO {
@@ -16,10 +17,8 @@ namespace VulkanUniformInfos {
     };
 
     struct PBRConstant {
-        uint32_t objIdx;
-        glm::mat4 projView;
-        glm::vec3 viewPos;
-        glm::vec3 viewDir;
+        alignas(4) uint32_t objIdx;
+        alignas(4) uint32_t frameIdx;
     };
 
     struct PhongConstant {
