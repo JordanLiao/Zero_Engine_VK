@@ -1,5 +1,5 @@
 #include "SkeletalAnimation.h"
-#include "GLM/gtx/transform.hpp"
+#include "gtx/transform.hpp"
 
 #include <iostream>
 

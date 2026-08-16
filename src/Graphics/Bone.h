@@ -1,7 +1,7 @@
 #ifndef _BONE_H_
 #define _BONE_H_
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 /*
 	NOTE TO SELF: Assimp specifies that each bone knows which vertices it affects and their weights, 

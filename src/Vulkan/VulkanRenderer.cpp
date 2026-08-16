@@ -244,7 +244,7 @@ void VulkanRenderer::createUniformBuffers() {
 
 void VulkanRenderer::createPipelines() {
     std::vector<VkDescriptorSetLayout> layouts = { vkRourceManager->getDescriptorSetLayouts() };
-    pbrPipeline = VulkanPipeline("./src/shaders/pbr_vert.spv", "./src/shaders/pbr_frag.spv", 
+    pbrPipeline = VulkanPipeline("./shaders/pbr_vert.spv", "./shaders/pbr_frag.spv", 
                                       VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT, 
                                       swapchain.extent, swapchain.format, depthFormat, sizeof(VulkanUniformInfos::PBRConstant),
                                       layouts, context);

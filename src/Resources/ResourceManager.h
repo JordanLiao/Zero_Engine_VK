@@ -11,7 +11,7 @@ class VulkanResourceManager;
 
 #include "Formats.h"
 #include "Image.h"
-#include "../Resources/GraphicsBuffers.h"
+#include "GraphicsBuffers.h"
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>

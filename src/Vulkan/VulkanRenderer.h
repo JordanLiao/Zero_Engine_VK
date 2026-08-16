@@ -10,7 +10,7 @@
 #include "../Resources/Image.h"
 
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 #include <vulkan/vulkan.h>
 
 #include <vector>

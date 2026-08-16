@@ -1,6 +1,6 @@
 #include "Bone.h"
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 Bone::Bone(glm::mat4 bindingPoseOffset) {
 	this->offsetMat = bindingPoseOffset;

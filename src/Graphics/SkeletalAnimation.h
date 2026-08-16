@@ -1,8 +1,8 @@
 #ifndef _SKELETALANIMATION_H_
 #define _SKELETALANIMATION_H_
 
-#include "GLM/glm.hpp"
-#include "GLM/gtx/quaternion.hpp"
+#include "glm.hpp"
+#include "gtx/quaternion.hpp"
 
 #include "Node.h"
 #include "Bone.h"

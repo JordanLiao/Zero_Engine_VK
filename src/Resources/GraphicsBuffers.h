@@ -2,7 +2,7 @@
 #define _GRAPHICSBUFFERS_H_
 
 #include <vector>
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 struct IndexBuffer {
     std::vector<glm::ivec3> triangles;

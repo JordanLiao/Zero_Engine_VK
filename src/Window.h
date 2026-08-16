@@ -2,7 +2,7 @@
 #define _WINDOW_H_
 
 #define NOMINMAX
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 //#include "GLFW/glfw3.h"
 
 struct GLFWwindow;

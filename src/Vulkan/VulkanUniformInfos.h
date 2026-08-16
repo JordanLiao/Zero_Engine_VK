@@ -1,7 +1,7 @@
 #ifndef _VULKANUNIFORMINFOS_H_
 #define _VULKANUNIFORMINFOS_H_
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 namespace VulkanUniformInfos {
     struct PerFrameUBO {

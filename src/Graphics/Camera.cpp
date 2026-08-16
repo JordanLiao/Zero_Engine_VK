@@ -1,6 +1,6 @@
 #include "Camera.h"
 
-#include "GLM/gtx/transform.hpp"
+#include "gtx/transform.hpp"
 
 #include <stdexcept>
 

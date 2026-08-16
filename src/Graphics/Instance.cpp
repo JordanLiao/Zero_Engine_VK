@@ -1,8 +1,8 @@
 #include "Instance.h"
 #include "Object.h"
-#include "../tools/ColorID.h"
+#include "ColorID.h"
 
-#include "GLM/gtx/transform.hpp"
+#include "gtx/transform.hpp"
 
 Instance::Instance(Object* obj) {
     this->obj = obj;

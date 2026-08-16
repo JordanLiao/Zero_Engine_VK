@@ -1,7 +1,7 @@
 #ifndef _LIGHTSOURCE_H_
 #define _LIGHTSOURCE_H_
 
-#include "../Core.h"
+#include "glm.hpp"
 
 enum lightType {
 	point,

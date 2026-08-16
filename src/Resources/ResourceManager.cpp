@@ -8,7 +8,7 @@
 #include "Object.h"
 #include "Mesh.h"
 #include "Material.h"
-#include "../tools/MathConverter.h"
+#include "MathConverter.h"
 
 #include <iostream>
 #include <stdexcept>

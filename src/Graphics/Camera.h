@@ -1,7 +1,7 @@
 #ifndef _CAMERA_H_
 #define _CAMERA_H_
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 enum cameraRole {
 	engineDisplayCam,

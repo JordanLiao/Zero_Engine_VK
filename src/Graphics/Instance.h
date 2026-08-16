@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 struct Object;
 

@@ -4,7 +4,7 @@
 
 #include "VulkanRenderer.h"
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 #include <vector>
 

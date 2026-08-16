@@ -1,7 +1,7 @@
 #ifndef _MATHCONVERTER_H_
 #define _MATHCONVERTER_H_
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 #include <assimp/scene.h>
 
 class MathConverter {

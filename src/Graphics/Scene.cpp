@@ -3,7 +3,7 @@
 #include "Object.h"
 #include "Mesh.h"
 
-#include "GLM/gtx/transform.hpp"
+#include "gtx/transform.hpp"
 
 Scene::Scene() {}
 
@@ -14,7 +14,7 @@ Scene::Scene(VulkanRenderer* renderer) {
 void Scene::render(glm::mat4 m, uint64_t appDuration) {
 	double time = (double)appDuration / 1000.0; //time in terms of sec
 
-    renderer->beginDrawCalls();
+    /*renderer->beginDrawCalls();
 	for (int i = 0; i < instances.size(); i++) {
 		Object* obj = instances[i]->obj;
         for (Mesh& m : obj->meshList) {
@@ -22,7 +22,7 @@ void Scene::render(glm::mat4 m, uint64_t appDuration) {
                            m.size, m.indexOffset, instances[i]->model, pbr.maps);
         }
 	}
-    renderer->submitDrawCalls();
+    renderer->submitDrawCalls();*/
 }
 
 void Scene::addInstance(Instance* instance) {

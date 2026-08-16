@@ -4,7 +4,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanContext.h"
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 #include <stdexcept>
 

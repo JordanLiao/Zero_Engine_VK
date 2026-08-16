@@ -1,8 +1,9 @@
 #ifndef _INSPECTIONPLANE_H_
 #define _INSPECTIONPLANE_H_
 
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 #include "Instance.h"
+#include "Object.h"
 
 class InspectionPlane {
 public:

@@ -3,7 +3,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-#include "GLM/glm.hpp"
+#include "glm.hpp"
 
 #include <vector>
 

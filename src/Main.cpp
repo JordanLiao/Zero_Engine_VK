@@ -4,16 +4,16 @@
 #include "VulkanRenderer.h"
 #include "VulkanCommandUtils.h"
 
-#include "Resources/GraphicsBuffers.h"
-#include "Resources/Image.h"
-#include "Resources/ResourceManager.h"
-#include "Graphics/Object.h"
+#include "GraphicsBuffers.h"
+#include "Image.h"
+#include "ResourceManager.h"
+#include "Object.h"
 #include "Graphics/Mesh.h"
 #include "Material.h"
 
 //#define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
-#include "GLM/gtx/transform.hpp"
+#include "gtx/transform.hpp"
 
 #include "Imgui/imgui.h"
 #include "Imgui/imgui_impl_glfw.h"

@@ -1,6 +1,7 @@
 #include "InspectionPlane.h"
-#include "../Resources/ResourceManager.h"
-#include "GLM/gtc/matrix_transform.hpp"
+#include "ResourceManager.h"
+#include "Instance.h"
+#include "gtc/matrix_transform.hpp"
 
 #include <iostream>
 
